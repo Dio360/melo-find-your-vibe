@@ -866,9 +866,9 @@ Melo Player
 
 Possible infrastructure:
 
-* AWS S3 \+ CloudFront  
-* Cloudflare R2 \+ CDN  
-* Other compatible object-storage/CDN combinations
+* Local Storage / MinIO (Self-hosted S3 API for zero-cost local development & testing)  
+* Cloudflare R2 + CDN (Zero egress fees for staging & production)  
+* S3-compatible object-storage / CDN combinations
 
 Final selection should depend on:
 
@@ -1792,8 +1792,8 @@ A module can later be extracted into a dedicated service if scale justifies it.
 | Backend Framework | NestJS/Fastify |
 | Primary Database | PostgreSQL |
 | Cache | Redis |
-| Object Storage | S3-compatible storage |
-| CDN | Cloudflare CDN / AWS CloudFront |
+| Object Storage | Cloudflare R2 / Local MinIO / Local Storage |
+| CDN | Cloudflare CDN |
 | Search MVP | PostgreSQL Search |
 | Search Scale | OpenSearch / Elasticsearch |
 | AI | LLM \+ catalogue/recommendation tools |

@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --bg-base: #121212;
+  --bg-surface: #1E1E1E;
+  --bg-surface-elevated: #282828;
+  --bg-glass: rgba(30, 30, 30, 0.75);
+
+  --color-primary: #1DB95D;
+  --color-primary-hover: #1ED760;
+  --color-ember: #FF5722;
+  --color-gold: #FFC107;
+  --color-teal: #00E5FF;
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #B3B3B3;
+  --text-muted: #727272;
+  --border-subtle: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #121212;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2A2A2A;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3E3E3E;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: rgba(30, 30, 30, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-player {
+  background: rgba(20, 20, 20, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+}
+
+/* Glow effects */
+.glow-primary {
+  box-shadow: 0 0 20px rgba(29, 185, 93, 0.35);
+}
+
+.glow-ember {
+  box-shadow: 0 0 20px rgba(255, 87, 34, 0.35);
+}
+
+.glow-gold {
+  box-shadow: 0 0 20px rgba(255, 193, 7, 0.35);
+}
+
+.glow-teal {
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.35);
+}
+
+/* Hide scrollbar for carousel */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -15,6 +15,12 @@ export interface MusicIntent {
   count?: number;
 }
 
+export interface IntentParser {
+  parse(prompt: string): Promise<MusicIntent>;
+}
+
+export const INTENT_PARSER = 'INTENT_PARSER';
+
 const MOODS = [
   'calm', 'happy', 'sad', 'romantic', 'energetic', 'chill', 'emotional',
   'nostalgic', 'peaceful', 'confident', 'party', 'soulful', 'hype',
@@ -42,7 +48,7 @@ const GENRES: Record<string, string> = {
 };
 
 const REGIONS: Record<string, string> = {
-  naija: 'Nigeria', nigeria: 'Nigeria', nigerian: 'Nigeria',
+  naija: 'Nigeria', nigeria: 'Nigeria', nigerian: 'Nigeria', lagos: 'Nigeria',
   ghana: 'Ghana', ghanaian: 'Ghana',
   'south africa': 'South Africa', 'south african': 'South Africa',
   'west africa': 'West Africa', africa: 'Africa', african: 'Africa',
@@ -52,6 +58,24 @@ const LANGUAGES: Record<string, string> = {
   yoruba: 'Yoruba', igbo: 'Igbo', hausa: 'Hausa', pidgin: 'Pidgin', english: 'English',
 };
 
+// Canonical vocabularies — the LLM parser may only return these values.
+export const INTENT_VOCAB = {
+  mood: MOODS,
+  activity: [...new Set(Object.values(ACTIVITIES))],
+  genre: [...new Set(Object.values(GENRES))],
+  region: [...new Set(Object.values(REGIONS))],
+  language: [...new Set(Object.values(LANGUAGES))],
+};
+
+// Variant spellings the LLM might emit → canonical values.
+export const INTENT_ALIASES: Record<keyof typeof INTENT_VOCAB, Record<string, string>> = {
+  mood: Object.fromEntries(MOODS.map((m) => [m, m])),
+  activity: ACTIVITIES,
+  genre: GENRES,
+  region: REGIONS,
+  language: LANGUAGES,
+};
+
 /**
  * Rule-based intent parser (Phase 7 MVP).
  * Deterministic and explainable; satisfies the "never invent catalogue
@@ -59,7 +83,7 @@ const LANGUAGES: Record<string, string> = {
  * live catalogue rows only. Swappable for an LLM behind this interface.
  */
 @Injectable()
-export class IntentParserService {
+export class IntentParserService implements IntentParser {
   constructor(private readonly prisma: PrismaService) {}
 
   async parse(prompt: string): Promise<MusicIntent> {

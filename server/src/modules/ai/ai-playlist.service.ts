@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { RightsService } from '../playback/rights.service.js';
-import { IntentParserService, type MusicIntent } from './intent-parser.service.js';
+import { INTENT_PARSER, type IntentParser, type MusicIntent } from './intent-parser.service.js';
 
 export interface GeneratedPlaylist {
   playlist: {
@@ -27,12 +27,16 @@ export interface GeneratedPlaylist {
 export class AiPlaylistService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly parser: IntentParserService,
+    @Inject(INTENT_PARSER) private readonly parser: IntentParser,
     private readonly rights: RightsService,
   ) {}
 
   async interpret(prompt: string): Promise<MusicIntent> {
     return this.parser.parse(prompt);
+  }
+
+  parserName(): string {
+    return process.env.AI_PARSER === 'rule' || !process.env.GROQ_API_KEY ? 'rule' : 'groq';
   }
 
   async generate(userId: string, prompt: string, name?: string, count = 20): Promise<GeneratedPlaylist> {

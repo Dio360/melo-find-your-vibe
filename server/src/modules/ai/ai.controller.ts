@@ -7,8 +7,8 @@ export class AiController {
   constructor(private readonly ai: AiPlaylistService) {}
 
   @Post('interpret')
-  interpret(@Body() dto: { prompt: string }) {
-    return this.ai.interpret(dto.prompt ?? '');
+  async interpret(@Body() dto: { prompt: string }) {
+    return { parser: this.ai.parserName(), intent: await this.ai.interpret(dto.prompt ?? '') };
   }
 
   @Post('playlist')

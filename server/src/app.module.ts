@@ -13,6 +13,9 @@ import { VibesModule } from './modules/vibes/vibes.module.js';
 import { SearchModule } from './modules/search/search.module.js';
 import { HomeModule } from './modules/home/home.module.js';
 import { EventsModule } from './modules/events/events.module.js';
+import { LibraryModule } from './modules/library/library.module.js';
+import { PlaylistsModule } from './modules/playlists/playlists.module.js';
+import { RecommendationsModule } from './modules/recommendations/recommendations.module.js';
 
 @Module({
   imports: [
@@ -28,6 +31,9 @@ import { EventsModule } from './modules/events/events.module.js';
     SearchModule,
     HomeModule,
     EventsModule,
+    LibraryModule,
+    PlaylistsModule,
+    RecommendationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

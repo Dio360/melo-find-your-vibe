@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Play } from "lucide-react";
+import { Play, Heart } from "lucide-react";
 
 export interface TrackData {
   id: string;
@@ -19,11 +19,12 @@ export interface TrackData {
 interface TrackCardProps {
   track: TrackData;
   isPlaying: boolean;
+  isLiked: boolean;
   onPlay: (track: TrackData) => void;
   onLike: (track: TrackData) => void;
 }
 
-export function TrackCard({ track, isPlaying, onPlay }: TrackCardProps) {
+export function TrackCard({ track, isPlaying, isLiked, onPlay, onLike }: TrackCardProps) {
   const glow = track.borderColor ?? "#1DB95D";
   return (
     <div
@@ -58,6 +59,20 @@ export function TrackCard({ track, isPlaying, onPlay }: TrackCardProps) {
             title="Play Track"
           >
             <Play className="w-5 h-5 fill-black translate-x-0.5" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onLike(track);
+            }}
+            className={`absolute top-2 right-2 p-2 rounded-full backdrop-blur-md transition-all ${
+              isLiked
+                ? 'bg-[#FF5722]/90 text-black opacity-100'
+                : 'bg-black/60 text-white border border-white/20 opacity-0 group-hover:opacity-100 hover:bg-black/80'
+            }`}
+            title={isLiked ? 'Unlike' : 'Like'}
+          >
+            <Heart className={`w-4 h-4 ${isLiked ? 'fill-black' : ''}`} />
           </button>
         </div>
       </div>

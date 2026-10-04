@@ -69,4 +69,9 @@ export const api = {
     duration?: number;
     network?: string;
   }) => request('/events/listen', { method: 'POST', body: JSON.stringify(event) }).catch(() => null),
+  likedTracks: () => request<{ trackId: string }[]>('/library/likes'),
+  likeTrack: (trackId: string) =>
+    request('/library/likes/' + trackId, { method: 'POST' }).catch(() => null),
+  unlikeTrack: (trackId: string) =>
+    request('/library/likes/' + trackId, { method: 'DELETE' }).catch(() => null),
 };

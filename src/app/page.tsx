@@ -73,6 +73,7 @@ export default function HomePage() {
   const [selectedVibe, setSelectedVibe] = useState<string>('v1');
   const [tracks, setTracks] = useState<TrackData[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => {
@@ -122,6 +123,17 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    if (!user) {
+      setLikedIds(new Set());
+      return;
+    }
+    api
+      .likedTracks()
+      .then((likes) => setLikedIds(new Set(likes.map((l) => l.trackId))))
+      .catch(() => undefined);
+  }, [user]);
+
+  useEffect(() => {
     if (needsAuth) {
       setShowAuth(true);
       clearNeedsAuth();
@@ -138,6 +150,22 @@ export default function HomePage() {
   const handleAiSearch = (prompt: string) => {
     void api.logEvent({ eventType: 'search' }).catch(() => undefined);
     console.log('AI search prompt:', prompt);
+  };
+
+  const handleToggleLike = (track: TrackData) => {
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
+    const liked = likedIds.has(track.id);
+    setLikedIds((prev) => {
+      const next = new Set(prev);
+      if (liked) next.delete(track.id);
+      else next.add(track.id);
+      return next;
+    });
+    void (liked ? api.unlikeTrack(track.id) : api.likeTrack(track.id));
+    void api.logEvent({ trackId: track.id, eventType: liked ? 'unlike' : 'like' });
   };
 
   return (
@@ -191,8 +219,9 @@ export default function HomePage() {
                 key={track.id}
                 track={track}
                 isPlaying={playerStatus === 'playing' && playingId === track.id}
+                isLiked={likedIds.has(track.id)}
                 onPlay={() => void playQueue(tracks, i)}
-                onLike={() => undefined}
+                onLike={() => handleToggleLike(track)}
               />
             ))}
           </div>

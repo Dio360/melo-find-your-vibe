@@ -7,9 +7,11 @@ import { useAuth } from '@/hooks/useAuth';
 
 export function AuthModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const login = useAuth((s) => s.login);
-  const [step, setStep] = useState<'phone' | 'code'>('phone');
+  const [step, setStep] = useState<'phone' | 'code' | 'name'>('phone');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  const [name, setName] = useState('');
+  const [pending, setPending] = useState<{ token: string; user: { id: string; phone: string; name: string | null; country: string | null } } | null>(null);
   const [devCode, setDevCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -19,6 +21,8 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
   const close = () => {
     setStep('phone');
     setCode('');
+    setName('');
+    setPending(null);
     setDevCode(null);
     setError(null);
     onClose();
@@ -45,10 +49,32 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
     setError(null);
     try {
       const res = await api.verifyOtp(phone, code);
-      login(res.accessToken, res.user);
-      close();
+      if (!res.user.name) {
+        // First sign-in — capture a display name (onboarding).
+        setPending({ token: res.accessToken, user: res.user });
+        setStep('name');
+      } else {
+        login(res.accessToken, res.user);
+        close();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pending || name.trim().length < 2) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await api.updateProfile({ name: name.trim() });
+      login(pending.token, updated);
+      close();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save name');
     } finally {
       setBusy(false);
     }
@@ -65,7 +91,27 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
         </div>
         <p className="text-xs text-zinc-400 mb-5">Phone OTP — no password needed.</p>
 
-        {step === 'phone' ? (
+        {step === 'name' ? (
+          <form onSubmit={saveName} className="space-y-3">
+            <p className="text-xs text-zinc-400">
+              Welcome to Melo! What should we call you?
+            </p>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Chioma"
+              maxLength={40}
+              className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/10 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#1DB95D]"
+            />
+            <button
+              type="submit"
+              disabled={busy || name.trim().length < 2}
+              className="w-full py-3 rounded-xl bg-[#1DB95D] text-black font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all"
+            >
+              {busy ? 'Saving…' : 'Start listening'}
+            </button>
+          </form>
+        ) : step === 'phone' ? (
           <form onSubmit={requestCode} className="space-y-3">
             <label className="flex items-center gap-2 px-4 py-3 rounded-xl bg-black/60 border border-white/10 focus-within:border-[#1DB95D]">
               <Phone className="w-4 h-4 text-zinc-500 shrink-0" />

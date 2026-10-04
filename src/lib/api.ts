@@ -22,6 +22,10 @@ async function request<T>(path: string, init?: RequestInit, auth = true): Promis
     if (token) headers.Authorization = `Bearer ${token}`;
   }
   const res = await fetch(`${API_URL}${path}`, { ...init, headers });
+  if (res.status === 401 && auth && getToken()) {
+    // Session expired or revoked — drop it so the UI falls back to logged-out.
+    setToken(null);
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error((body as { message?: string }).message ?? `API ${res.status}`);
@@ -50,6 +54,8 @@ export const api = {
       false,
     ),
   me: () => request<ApiUser & { preference: unknown }>('/users/me'),
+  updateProfile: (dto: { name?: string; avatar?: string; country?: string }) =>
+    request<ApiUser>('/users/me', { method: 'PATCH', body: JSON.stringify(dto) }),
   tracks: (params = '') => request<unknown[]>(`/catalogue/tracks${params}`),
   authorize: (trackId: string, quality: string, territory = 'NG') =>
     request<{ allowed: boolean; reason?: string; streamUrl?: string; expiresIn?: number; bitrate?: number }>(

@@ -9,6 +9,9 @@ import { UsersModule } from './modules/users/users.module.js';
 import { CatalogueModule } from './modules/catalogue/catalogue.module.js';
 import { PlaybackModule } from './modules/playback/playback.module.js';
 import { StorageModule } from './modules/storage/storage.module.js';
+import { VibesModule } from './modules/vibes/vibes.module.js';
+import { SearchModule } from './modules/search/search.module.js';
+import { HomeModule } from './modules/home/home.module.js';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { StorageModule } from './modules/storage/storage.module.js';
     UsersModule,
     CatalogueModule,
     PlaybackModule,
+    VibesModule,
+    SearchModule,
+    HomeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

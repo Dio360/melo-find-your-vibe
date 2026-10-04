@@ -22,5 +22,15 @@ services:
     ports:
       - "6379:6379"
 
+  # Local S3-compatible object storage for Phase 3 audio delivery.
+  # Ephemeral by design — re-run server/prisma/demo-audio.mjs after restart.
+  s3:
+    image: motoserver/moto:latest
+    container_name: melo-s3
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    command: -p5000 -H0.0.0.0
+
 volumes:
   melo-pgdata:

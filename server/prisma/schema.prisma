@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---- Users & Auth (Phase 2) ----
+
+model User {
+  id        String    @id @default(uuid())
+  phone     String    @unique
+  email     String?   @unique
+  name      String?
+  avatar    String?
+  country   String?   @default("NG")
+  status    String    @default("active")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  preference UserPreference?
+  playlists  Playlist[]
+  likes      Like[]
+  events     ListeningEvent[]
+}
+
+model UserPreference {
+  userId             String @id
+  user               User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  genres             String[] @default([])
+  artists            String[] @default([])
+  languages          String[] @default([])
+  regions            String[] @default([])
+  moods              String[] @default([])
+  activities         String[] @default([])
+  dataMode           String   @default("auto")
+  explicitPreference String   @default("clean")
+}
+
+// ---- Catalogue (Phase 2 skeleton, CRUD in Phase 3) ----
+
+model Artist {
+  id       String  @id @default(uuid())
+  name     String
+  bio      String?
+  image    String?
+  country  String?
+  region   String?
+  verified Boolean @default(false)
+  status   String  @default("active")
+  albums   Album[]
+  tracks   Track[]
+}
+
+model Album {
+  id          String    @id @default(uuid())
+  artistId    String
+  artist      Artist    @relation(fields: [artistId], references: [id])
+  title       String
+  cover       String?
+  releaseDate DateTime?
+  status      String    @default("active")
+  tracks      Track[]
+}
+
+model Track {
+  id             String          @id @default(uuid())
+  artistId       String
+  artist         Artist          @relation(fields: [artistId], references: [id])
+  albumId        String?
+  album          Album?          @relation(fields: [albumId], references: [id])
+  title          String
+  duration       Int
+  genre          String?
+  language       String?
+  region         String?
+  explicit       Boolean         @default(false)
+  status         String          @default("active")
+  versions       TrackVersion[]
+  rights         ContentRight[]
+  playlistTracks PlaylistTrack[]
+  likes          Like[]
+  events         ListeningEvent[]
+}
+
+model TrackVersion {
+  id          String  @id @default(uuid())
+  trackId     String
+  track       Track   @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  versionType String  @default("original")
+  titleSuffix String?
+  duration    Int?
+  status      String  @default("active")
+  assets      AudioAsset[]
+}
+
+model AudioAsset {
+  id             String       @id @default(uuid())
+  trackVersionId String
+  version        TrackVersion @relation(fields: [trackVersionId], references: [id], onDelete: Cascade)
+  storageKey     String
+  format         String       @default("mp3")
+  bitrate        Int          @default(128)
+  sampleRate     Int?
+  duration       Int?
+  status         String       @default("ready")
+}
+
+model ContentRight {
+  id               String    @id @default(uuid())
+  trackId          String?
+  track            Track?    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  rightType        String    @default("streaming")
+  territory        String    @default("NG")
+  streamingAllowed Boolean   @default(true)
+  downloadAllowed  Boolean   @default(false)
+  offlineAllowed   Boolean   @default(false)
+  startAt          DateTime?
+  endAt            DateTime?
+  status           String    @default("active")
+}
+
+// ---- Library & Playlists (Phase 6, tables ready now) ----
+
+model Playlist {
+  id          String          @id @default(uuid())
+  ownerId     String
+  owner       User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  cover       String?
+  visibility  String          @default("private")
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  tracks      PlaylistTrack[]
+}
+
+model PlaylistTrack {
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  trackId    String
+  track      Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  position   Int      @default(0)
+  addedAt    DateTime @default(now())
+
+  @@id([playlistId, trackId])
+}
+
+model Like {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trackId   String
+  track     Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, trackId])
+}
+
+model ListeningEvent {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  trackId   String?
+  track     Track?   @relation(fields: [trackId], references: [id], onDelete: SetNull)
+  eventType String
+  position  Int?
+  duration  Int?
+  device    String?
+  network   String?
+  sessionId String?
+  createdAt DateTime @default(now())
+}
+
+// ---- Vibe taxonomy (Phase 4, seeded in Phase 2) ----
+
+model Vibe {
+  id        String  @id @default(uuid())
+  name      String  @unique
+  category  String
+  colorHex  String  @default("#1DB95D")
+  active    Boolean @default(true)
+}

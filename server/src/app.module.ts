@@ -16,6 +16,7 @@ import { EventsModule } from './modules/events/events.module.js';
 import { LibraryModule } from './modules/library/library.module.js';
 import { PlaylistsModule } from './modules/playlists/playlists.module.js';
 import { RecommendationsModule } from './modules/recommendations/recommendations.module.js';
+import { AiModule } from './modules/ai/ai.module.js';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { RecommendationsModule } from './modules/recommendations/recommendations
     LibraryModule,
     PlaylistsModule,
     RecommendationsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

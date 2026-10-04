@@ -24,6 +24,7 @@ model User {
   likes      Like[]
   follows    ArtistFollow[]
   savedAlbums SavedAlbum[]
+  aiRequests AiRequest[]
   events     ListeningEvent[]
 }
 
@@ -202,4 +203,16 @@ model Vibe {
   category  String
   colorHex  String  @default("#1DB95D")
   active    Boolean @default(true)
+}
+
+// ---- AI request log (Phase 7, quality analysis) ----
+
+model AiRequest {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  prompt      String
+  intent      String   @default("{}")
+  resultCount Int      @default(0)
+  createdAt   DateTime @default(now())
 }

@@ -74,6 +74,7 @@ export default function HomePage() {
   const [tracks, setTracks] = useState<TrackData[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => {
@@ -147,9 +148,36 @@ export default function HomePage() {
     void api.logEvent({ eventType: 'vibe_select' }).catch(() => undefined);
   };
 
-  const handleAiSearch = (prompt: string) => {
-    void api.logEvent({ eventType: 'search' }).catch(() => undefined);
-    console.log('AI search prompt:', prompt);
+  const handleAiSearch = async (prompt: string) => {
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
+    setAiNotice('Melo is building your vibe…');
+    try {
+      const res = await api.aiPlaylist(prompt, 20);
+      const mapped = res.playlist.tracks.map((pt, i) => {
+        const color = GLOW[i % GLOW.length]!;
+        return {
+          id: pt.track.id,
+          title: pt.track.title,
+          artist: pt.track.artist.name,
+          album: '',
+          coverUrl: coverFor(pt.track.id, pt.track.artist.name, color),
+          vibe: '',
+          region: '',
+          duration: fmtDuration(pt.track.duration),
+          borderColor: color,
+        } as TrackData;
+      });
+      setAiNotice(`${res.playlist.name} — ${res.explanation}`);
+      if (mapped.length > 0) {
+        setTracks(mapped);
+        await playQueue(mapped, 0);
+      }
+    } catch (e) {
+      setAiNotice(e instanceof Error ? `Melo AI: ${e.message}` : 'Melo AI failed');
+    }
   };
 
   const handleToggleLike = (track: TrackData) => {
@@ -210,7 +238,19 @@ export default function HomePage() {
           </section>
 
           {/* AI prompt bar */}
-          <AiPromptBar onSearchAi={handleAiSearch} />
+          <AiPromptBar onSearchAi={(prompt) => void handleAiSearch(prompt)} />
+
+          {aiNotice && (
+            <div className="p-3 rounded-xl bg-[#00E5FF]/10 border border-[#00E5FF]/30 text-[#00E5FF] text-xs font-medium flex items-center justify-between gap-3">
+              <span>{aiNotice}</span>
+              <button
+                onClick={() => setAiNotice(null)}
+                className="text-zinc-400 hover:text-white text-xs underline shrink-0"
+              >
+                Clear
+              </button>
+            </div>
+          )}
 
           {/* Track grid — live catalogue */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 pt-2">

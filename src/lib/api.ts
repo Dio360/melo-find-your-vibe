@@ -70,6 +70,25 @@ export const api = {
     network?: string;
   }) => request('/events/listen', { method: 'POST', body: JSON.stringify(event) }).catch(() => null),
   likedTracks: () => request<{ trackId: string }[]>('/library/likes'),
+  aiInterpret: (prompt: string) =>
+    request<Record<string, unknown>>('/ai/interpret', {
+      method: 'POST',
+      body: JSON.stringify({ prompt }),
+    }),
+  aiPlaylist: (prompt: string, count = 20) =>
+    request<{
+      playlist: {
+        id: string;
+        name: string;
+        description: string | null;
+        tracks: {
+          position: number;
+          track: { id: string; title: string; duration: number; artist: { name: string } };
+        }[];
+      };
+      explanation: string;
+      fallback: boolean;
+    }>('/ai/playlist', { method: 'POST', body: JSON.stringify({ prompt, count }) }),
   likeTrack: (trackId: string) =>
     request('/library/likes/' + trackId, { method: 'POST' }).catch(() => null),
   unlikeTrack: (trackId: string) =>

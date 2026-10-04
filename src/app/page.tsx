@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Compass } from 'lucide-react';
+import { Compass, Mic2 } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { BottomNav } from '@/components/BottomNav';
 import { Header } from '@/components/Header';
@@ -13,6 +13,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
+import { VIBE_FILTERS, coverFor, fmtDuration, glowFor } from '@/lib/vibes';
 
 // Vibe taxonomy — mirrors GET /api/v1/vibes
 const fallbackVibes: VibeItem[] = [
@@ -22,28 +23,6 @@ const fallbackVibes: VibeItem[] = [
   { id: 'v4', name: 'Late Night Study', category: 'activity', colorHex: '#1DB95D' },
 ];
 
-const GLOW = ['#1DB95D', '#FF5722', '#E8DCC8', '#00E5FF', '#FF9800'];
-
-function fmtDuration(total: number): string {
-  const m = Math.floor(total / 60);
-  const s = Math.floor(total % 60);
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
-// Offline-safe cover art: gradient tile with the artist initial (no external images).
-function coverFor(id: string, artist: string, color: string): string {
-  const initial = (artist.charAt(0) || 'M').toUpperCase();
-  const svg =
-    `<svg xmlns='http://www.w3.org/2000/svg' width='500' height='500'>` +
-    `<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>` +
-    `<stop offset='0' stop-color='${color}' stop-opacity='0.85'/>` +
-    `<stop offset='1' stop-color='#141414'/></linearGradient></defs>` +
-    `<rect width='500' height='500' fill='url(#g)'/>` +
-    `<text x='50%' y='58%' font-size='200' text-anchor='middle' ` +
-    `fill='rgba(255,255,255,0.9)' font-family='sans-serif' font-weight='bold'>${initial}</text></svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
-
 interface CatalogueTrack {
   id: string;
   title: string;
@@ -52,6 +31,12 @@ interface CatalogueTrack {
   region?: string | null;
   artist?: { id: string; name: string } | null;
   album?: { id: string; title: string } | null;
+}
+
+interface Artist {
+  id: string;
+  name: string;
+  country: string | null;
 }
 
 export default function HomePage() {
@@ -70,8 +55,9 @@ export default function HomePage() {
   const clearNeedsAuth = useMeloPlayer((s) => s.clearNeedsAuth);
 
   const [vibes, setVibes] = useState<VibeItem[]>(fallbackVibes);
-  const [selectedVibe, setSelectedVibe] = useState<string>('v1');
+  const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
   const [tracks, setTracks] = useState<TrackData[]>([]);
+  const [artists, setArtists] = useState<Artist[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [aiNotice, setAiNotice] = useState<string | null>(null);
@@ -83,21 +69,17 @@ export default function HomePage() {
     api
       .tracks('?take=20')
       .then((list) => {
-        const mapped = (list as CatalogueTrack[]).map((t, i) => {
-          const color = GLOW[i % GLOW.length]!;
-          const artist = t.artist?.name ?? 'Unknown artist';
-          return {
-            id: t.id,
-            title: t.title,
-            artist,
-            album: t.album?.title ?? '',
-            coverUrl: coverFor(t.id, artist, color),
-            vibe: t.genre ?? '',
-            region: t.region ?? '',
-            duration: fmtDuration(t.duration),
-            borderColor: color,
-          };
-        });
+        const mapped = (list as CatalogueTrack[]).map((t, i) => ({
+          id: t.id,
+          title: t.title,
+          artist: t.artist?.name ?? 'Unknown artist',
+          album: t.album?.title ?? '',
+          coverUrl: coverFor(t.id, t.artist?.name ?? '?', glowFor(i)),
+          vibe: t.genre ?? '',
+          region: t.region ?? '',
+          duration: fmtDuration(t.duration),
+          borderColor: glowFor(i),
+        }));
         if (mapped.length > 0) setTracks(mapped as TrackData[]);
       })
       .catch((e) => setLoadError(e instanceof Error ? e.message : 'Catalogue unreachable'));
@@ -121,6 +103,12 @@ export default function HomePage() {
         }
       })
       .catch(() => undefined);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'}/catalogue/artists?take=10`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        if (Array.isArray(list)) setArtists(list as Artist[]);
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -130,7 +118,7 @@ export default function HomePage() {
     }
     api
       .likedTracks()
-      .then((likes) => setLikedIds(new Set(likes.map((l) => l.trackId))))
+      .then((likes) => setLikedIds(new Set(likes.map((l) => l.track.id))))
       .catch(() => undefined);
   }, [user]);
 
@@ -144,11 +132,11 @@ export default function HomePage() {
   const dataSaverOn = quality === 'data_saver' || autoSaver;
 
   const handleSelectVibe = (vibe: VibeItem) => {
-    setSelectedVibe(vibe.id);
+    setSelectedVibe((s) => (s === vibe.id ? null : vibe.id));
     void api.logEvent({ eventType: 'vibe_select' }).catch(() => undefined);
   };
 
-  const handleAiSearch = async (prompt: string) => {
+  const playAiPrompt = async (prompt: string) => {
     if (!user) {
       setShowAuth(true);
       return;
@@ -156,23 +144,21 @@ export default function HomePage() {
     setAiNotice('Melo is building your vibe…');
     try {
       const res = await api.aiPlaylist(prompt, 20);
-      const mapped = res.playlist.tracks.map((pt, i) => {
-        const color = GLOW[i % GLOW.length]!;
-        return {
-          id: pt.track.id,
-          title: pt.track.title,
-          artist: pt.track.artist.name,
-          album: '',
-          coverUrl: coverFor(pt.track.id, pt.track.artist.name, color),
-          vibe: '',
-          region: '',
-          duration: fmtDuration(pt.track.duration),
-          borderColor: color,
-        } as TrackData;
-      });
+      const mapped = res.playlist.tracks.map((pt, i) => ({
+        id: pt.track.id,
+        title: pt.track.title,
+        artist: pt.track.artist.name,
+        album: '',
+        coverUrl: coverFor(pt.track.id, pt.track.artist.name, glowFor(i)),
+        vibe: '',
+        region: '',
+        duration: fmtDuration(pt.track.duration),
+        borderColor: glowFor(i),
+      })) as TrackData[];
       setAiNotice(`${res.playlist.name} — ${res.explanation}`);
       if (mapped.length > 0) {
         setTracks(mapped);
+        setSelectedVibe(null);
         await playQueue(mapped, 0);
       }
     } catch (e) {
@@ -196,6 +182,12 @@ export default function HomePage() {
     void api.logEvent({ trackId: track.id, eventType: liked ? 'unlike' : 'like' });
   };
 
+  const activeVibe = vibes.find((v) => v.id === selectedVibe) ?? null;
+  const filter = activeVibe ? (VIBE_FILTERS[activeVibe.name] ?? {}) : {};
+  const visible = tracks.filter(
+    (t) => (!filter.genre || t.vibe === filter.genre) && (!filter.region || t.region === filter.region),
+  );
+
   return (
     <div className="flex min-h-screen bg-[#121212]">
       {/* Desktop Sidebar Navigation */}
@@ -209,6 +201,21 @@ export default function HomePage() {
         />
 
         <main className="flex-1 px-6 md:px-10 py-2 space-y-6 max-w-7xl mx-auto w-full">
+          {/* AI discovery first — Spotify-style top search */}
+          <AiPromptBar onSearchAi={(prompt) => void playAiPrompt(prompt)} />
+
+          {aiNotice && (
+            <div className="p-3 rounded-xl bg-[#00E5FF]/10 border border-[#00E5FF]/30 text-[#00E5FF] text-xs font-medium flex items-center justify-between gap-3">
+              <span>{aiNotice}</span>
+              <button
+                onClick={() => setAiNotice(null)}
+                className="text-zinc-400 hover:text-white text-xs underline shrink-0"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+
           {/* Hero / Greeting Header */}
           <div>
             <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
@@ -237,30 +244,45 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* AI prompt bar */}
-          <AiPromptBar onSearchAi={(prompt) => void handleAiSearch(prompt)} />
-
-          {aiNotice && (
-            <div className="p-3 rounded-xl bg-[#00E5FF]/10 border border-[#00E5FF]/30 text-[#00E5FF] text-xs font-medium flex items-center justify-between gap-3">
-              <span>{aiNotice}</span>
-              <button
-                onClick={() => setAiNotice(null)}
-                className="text-zinc-400 hover:text-white text-xs underline shrink-0"
-              >
-                Clear
-              </button>
-            </div>
+          {/* Popular Artists */}
+          {artists.length > 0 && (
+            <section className="space-y-3">
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <Mic2 className="w-4 h-4 text-[#FFC107]" />
+                <span>Popular Artists</span>
+              </div>
+              <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
+                {artists.map((a, i) => (
+                  <button
+                    key={a.id}
+                    onClick={() => void playAiPrompt(`songs like ${a.name}`)}
+                    title={`Play a ${a.name} vibe`}
+                    className="flex flex-col items-center gap-2 shrink-0 group"
+                  >
+                    <img
+                      src={coverFor(a.id, a.name, glowFor(i))}
+                      alt={a.name}
+                      className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border border-white/10 group-hover:border-[#1DB95D] group-hover:scale-105 transition-all"
+                      style={{ boxShadow: `0 0 18px ${glowFor(i)}33` }}
+                    />
+                    <span className="text-xs font-bold text-white group-hover:text-[#1DB95D] transition-colors">
+                      {a.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
           )}
 
-          {/* Track grid — live catalogue */}
+          {/* Track grid — live catalogue, vibe-filtered */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 pt-2">
-            {tracks.map((track, i) => (
+            {visible.map((track) => (
               <TrackCard
                 key={track.id}
                 track={track}
                 isPlaying={playerStatus === 'playing' && playingId === track.id}
                 isLiked={likedIds.has(track.id)}
-                onPlay={() => void playQueue(tracks, i)}
+                onPlay={() => void playQueue(visible, visible.findIndex((t) => t.id === track.id))}
                 onLike={() => handleToggleLike(track)}
               />
             ))}
@@ -268,6 +290,11 @@ export default function HomePage() {
           {authReady && tracks.length === 0 && (
             <p className="text-xs text-zinc-500">
               {loadError ? `Catalogue error: ${loadError}` : 'Connecting to the Melo catalogue…'}
+            </p>
+          )}
+          {activeVibe && visible.length === 0 && tracks.length > 0 && (
+            <p className="text-xs text-zinc-500">
+              No tracks for {activeVibe.name} yet — check back as the catalogue grows.
             </p>
           )}
         </main>

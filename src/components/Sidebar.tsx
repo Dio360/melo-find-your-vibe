@@ -1,21 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Search, Library, Sparkles, AudioLines } from "lucide-react";
 
 const navItems = [
   { label: "Home", href: "/", icon: Home, colorHex: "#1DB95D" },
-  { label: "Vibes", href: "#vibes", icon: AudioLines, colorHex: "#FF5722" },
-  { label: "Search", href: "#search", icon: Search, colorHex: "#00E5FF" },
-  { label: "Library", href: "#library", icon: Library, colorHex: "#FFC107" },
-  { label: "AI Discovery", href: "#ai", icon: Sparkles, colorHex: "#1DB95D" },
+  { label: "Vibes", href: "/vibes", icon: AudioLines, colorHex: "#FF5722" },
+  { label: "Search", href: "/search", icon: Search, colorHex: "#00E5FF" },
+  { label: "Library", href: "/library", icon: Library, colorHex: "#FFC107" },
+  { label: "AI Discovery", href: "/ai", icon: Sparkles, colorHex: "#1DB95D" },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [active, setActive] = useState<string>(pathname === "/" ? "Home" : "Home");
 
   return (
     <aside className="hidden md:flex flex-col w-60 border-r border-white/10 bg-[#0E0E0E] h-screen sticky top-0 z-30">
@@ -68,12 +67,11 @@ export function Sidebar() {
       <nav className="flex-1 space-y-1 px-3">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = active === item.label;
+          const isActive = pathname === item.href;
           return (
             <Link
               key={item.label}
               href={item.href}
-              onClick={() => setActive(item.label)}
               className="relative flex items-center gap-3.5 px-4 py-3 rounded-lg text-[15px] transition-all duration-300"
               style={{
                 color: isActive ? item.colorHex : "#D4D4D8",

@@ -7,10 +7,10 @@ import { Home, Compass, Search, Library, Sparkles } from "lucide-react";
 
 const mobileItems = [
   { label: "Home", href: "/", icon: Home },
-  { label: "Vibes", href: "#vibes", icon: Compass },
-  { label: "Search", href: "#search", icon: Search },
-  { label: "AI", href: "#ai", icon: Sparkles },
-  { label: "Library", href: "#library", icon: Library },
+  { label: "Vibes", href: "/vibes", icon: Compass },
+  { label: "Search", href: "/search", icon: Search },
+  { label: "AI", href: "/ai", icon: Sparkles },
+  { label: "Library", href: "/library", icon: Library },
 ];
 
 export function BottomNav() {

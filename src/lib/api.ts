@@ -69,7 +69,39 @@ export const api = {
     duration?: number;
     network?: string;
   }) => request('/events/listen', { method: 'POST', body: JSON.stringify(event) }).catch(() => null),
-  likedTracks: () => request<{ trackId: string }[]>('/library/likes'),
+  likedTracks: () =>
+    request<{ track: { id: string; title: string; artist: { name: string } } }[]>(
+      '/library/likes',
+    ),
+  followedArtists: () =>
+    request<{ artist: { id: string; name: string; country: string | null } }[]>('/library/artists'),
+  followArtist: (artistId: string) =>
+    request(`/library/artists/${artistId}`, { method: 'POST' }).catch(() => null),
+  unfollowArtist: (artistId: string) =>
+    request(`/library/artists/${artistId}`, { method: 'DELETE' }).catch(() => null),
+  recentPlays: () => request<unknown[]>('/library/recent'),
+  myPlaylists: () =>
+    request<{ id: string; name: string; description: string | null; _count: { tracks: number } }[]>(
+      '/playlists/mine',
+    ),
+  createPlaylist: (name: string) =>
+    request<{ id: string; name: string }>('/playlists', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+  deletePlaylist: (id: string) =>
+    request(`/playlists/${id}`, { method: 'DELETE' }).catch(() => null),
+  playlistDetail: (id: string) =>
+    request<{
+      id: string;
+      name: string;
+      description: string | null;
+      tracks: { track: { id: string; title: string; artist: { name: string } } }[];
+    }>(`/playlists/${id}`),
+  searchAll: (q: string, entity?: string) =>
+    request<
+      { type: string; id: string; title: string; subtitle: string | null; score: number }[]
+    >(`/search?q=${encodeURIComponent(q)}${entity ? `&entity=${entity}` : ''}`, undefined, false),
   aiInterpret: (prompt: string) =>
     request<Record<string, unknown>>('/ai/interpret', {
       method: 'POST',

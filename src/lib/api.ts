@@ -35,22 +35,23 @@ async function request<T>(path: string, init?: RequestInit, auth = true): Promis
 
 export interface ApiUser {
   id: string;
-  phone: string;
+  phone: string | null;
+  email: string | null;
   name: string | null;
   country: string | null;
 }
 
 export const api = {
-  requestOtp: (phone: string) =>
-    request<{ ok: boolean; expiresIn: number; devCode?: string }>(
+  requestOtp: (identifier: string) =>
+    request<{ ok: boolean; kind: string; expiresIn: number; devCode?: string }>(
       '/auth/otp/request',
-      { method: 'POST', body: JSON.stringify({ phone }) },
+      { method: 'POST', body: JSON.stringify({ identifier }) },
       false,
     ),
-  verifyOtp: (phone: string, code: string) =>
+  verifyOtp: (identifier: string, code: string) =>
     request<{ accessToken: string; user: ApiUser }>(
       '/auth/otp/verify',
-      { method: 'POST', body: JSON.stringify({ phone, code }) },
+      { method: 'POST', body: JSON.stringify({ identifier, code }) },
       false,
     ),
   me: () => request<ApiUser & { preference: unknown }>('/users/me'),

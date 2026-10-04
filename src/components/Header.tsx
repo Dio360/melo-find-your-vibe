@@ -66,7 +66,7 @@ export function Header({ onToggleDataSaver, dataSaverEnabled }: HeaderProps) {
             >
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF5722] to-[#FFC107] flex items-center justify-center shadow-md">
                 <span className="text-black font-extrabold text-sm">
-                  {(user.name ?? user.phone).charAt(0).toUpperCase()}
+                  {(user.name ?? user.email ?? user.phone ?? 'M').charAt(0).toUpperCase()}
                 </span>
               </div>
               <span className="hidden sm:inline text-sm font-medium text-white">
@@ -76,7 +76,7 @@ export function Header({ onToggleDataSaver, dataSaverEnabled }: HeaderProps) {
             {menuOpen && (
               <div className="absolute right-0 mt-2 w-44 rounded-xl bg-[#1E1E1E] border border-white/10 shadow-2xl p-1.5 z-50">
                 <div className="px-3 py-2 text-xs text-zinc-400 truncate border-b border-white/10 mb-1">
-                  {user.phone}
+                  {user.email ?? user.phone ?? 'Melo listener'}
                 </div>
                 <button
                   onClick={() => {

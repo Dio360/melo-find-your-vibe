@@ -25,6 +25,6 @@ export class AuthController {
 
   @Get('me')
   me(@Req() req: AuthenticatedRequest) {
-    return { userId: req.user.sub, phone: req.user.phone };
+    return { userId: req.user.sub, phone: req.user.phone ?? null, email: req.user.email ?? null };
   }
 }

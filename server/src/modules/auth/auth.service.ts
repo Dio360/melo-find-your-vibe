@@ -16,20 +16,37 @@ const OTP_COOLDOWN_SECONDS = 30;
 const OTP_LENGTH = Number(process.env.OTP_LENGTH ?? 6);
 
 export class RequestOtpDto {
-  phone!: string;
+  identifier?: string;
+  phone?: string;
+  email?: string;
 }
 
 export class VerifyOtpDto {
-  phone!: string;
+  identifier?: string;
+  phone?: string;
+  email?: string;
   code!: string;
 }
 
-function normalizePhone(phone: string): string {
-  const digits = phone.replace(/[^\d+]/g, '');
+type Identity = { kind: 'phone' | 'email'; value: string };
+
+function toIdentity(input: RequestOtpDto | VerifyOtpDto): Identity {
+  const raw = (input.identifier ?? input.phone ?? input.email ?? '').trim();
+  if (!raw) {
+    throw new BadRequestException('Phone number or email required');
+  }
+  if (raw.includes('@')) {
+    const email = raw.toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+      throw new BadRequestException('Invalid email address');
+    }
+    return { kind: 'email', value: email };
+  }
+  const digits = raw.replace(/[^\d+]/g, '');
   if (digits.length < 7 || digits.length > 16) {
     throw new BadRequestException('Invalid phone number');
   }
-  return digits;
+  return { kind: 'phone', value: digits };
 }
 
 @Injectable()
@@ -41,10 +58,11 @@ export class AuthService {
   ) {}
 
   async requestOtp(dto: RequestOtpDto) {
-    const phone = normalizePhone(dto.phone);
+    const identity = toIdentity(dto);
     const redis = this.redis.raw;
+    const key = `otp:${identity.kind}:${identity.value}`;
 
-    const cooldown = await redis.get(`otp:cooldown:${phone}`);
+    const cooldown = await redis.get(`${key}:cooldown`);
     if (cooldown) {
       throw new HttpException('Wait before requesting another code', HttpStatus.TOO_MANY_REQUESTS);
     }
@@ -53,57 +71,65 @@ export class AuthService {
     const min = 10 ** (OTP_LENGTH - 1);
     const code = String(randomInt(min, max + 1));
 
-    await redis.set(
-      `otp:${phone}`,
-      JSON.stringify({ code, attempts: 0 }),
-      'EX',
-      OTP_TTL_SECONDS,
-    );
-    await redis.set(`otp:cooldown:${phone}`, '1', 'EX', OTP_COOLDOWN_SECONDS);
+    await redis.set(key, JSON.stringify({ code, attempts: 0 }), 'EX', OTP_TTL_SECONDS);
+    await redis.set(`${key}:cooldown`, '1', 'EX', OTP_COOLDOWN_SECONDS);
 
-    // TODO (Phase 2): deliver via SMS provider (Termii/Africa's Talking).
+    // TODO: deliver via SMS (Termii/Africa's Talking) or email provider.
     // Dev convenience only — never return the code in production.
     const isProd = process.env.NODE_ENV === 'production';
     return {
       ok: true,
-      phone,
+      kind: identity.kind,
       expiresIn: OTP_TTL_SECONDS,
       ...(isProd ? {} : { devCode: code }),
     };
   }
 
   async verifyOtp(dto: VerifyOtpDto) {
-    const phone = normalizePhone(dto.phone);
+    const identity = toIdentity(dto);
     const redis = this.redis.raw;
+    const key = `otp:${identity.kind}:${identity.value}`;
 
-    const raw = await redis.get(`otp:${phone}`);
+    const raw = await redis.get(key);
     if (!raw) {
       throw new UnauthorizedException('Code expired or not requested');
     }
     const record = JSON.parse(raw) as { code: string; attempts: number };
     if (record.attempts >= OTP_MAX_ATTEMPTS) {
-      await redis.del(`otp:${phone}`);
+      await redis.del(key);
       throw new HttpException('Too many attempts, request a new code', HttpStatus.TOO_MANY_REQUESTS);
     }
     if (record.code !== dto.code.trim()) {
       record.attempts += 1;
-      await redis.set(`otp:${phone}`, JSON.stringify(record), 'KEEPTTL');
+      await redis.set(key, JSON.stringify(record), 'KEEPTTL');
       throw new UnauthorizedException('Invalid code');
     }
-    await redis.del(`otp:${phone}`);
+    await redis.del(key);
 
+    const where =
+      identity.kind === 'phone' ? { phone: identity.value } : { email: identity.value };
     const user = await this.prisma.user.upsert({
-      where: { phone },
+      where,
       update: {},
-      create: { phone, country: 'NG' },
+      create: {
+        ...(identity.kind === 'phone'
+          ? { phone: identity.value }
+          : { email: identity.value }),
+        country: 'NG',
+      },
     });
 
-    const accessToken = await this.jwt.signAsync({ sub: user.id, phone: user.phone });
+    const claims =
+      identity.kind === 'phone'
+        ? { sub: user.id, phone: user.phone }
+        : { sub: user.id, email: user.email };
+    const accessToken = await this.jwt.signAsync(claims);
     return {
       accessToken,
       user: {
         id: user.id,
         phone: user.phone,
+        email: user.email,
         name: user.name,
         country: user.country,
       },

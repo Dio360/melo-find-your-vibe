@@ -10,7 +10,7 @@ import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from './public.decorator.js';
 
 export interface AuthenticatedRequest extends Request {
-  user: { sub: string; phone: string };
+  user: { sub: string; phone?: string; email?: string };
 }
 
 @Injectable()

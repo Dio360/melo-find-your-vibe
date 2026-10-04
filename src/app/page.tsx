@@ -1,134 +1,143 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { Compass } from "lucide-react";
-import { Sidebar } from "@/components/Sidebar";
-import { BottomNav } from "@/components/BottomNav";
-import { Header } from "@/components/Header";
-import { VibePill, VibeItem } from "@/components/VibePill";
-import { AiPromptBar } from "@/components/AiPromptBar";
-import { TrackCard, TrackData } from "@/components/TrackCard";
-import { AudioPlayer } from "@/components/AudioPlayer";
+import React, { useEffect, useState } from 'react';
+import { Compass } from 'lucide-react';
+import { Sidebar } from '@/components/Sidebar';
+import { BottomNav } from '@/components/BottomNav';
+import { Header } from '@/components/Header';
+import { VibePill, VibeItem } from '@/components/VibePill';
+import { AiPromptBar } from '@/components/AiPromptBar';
+import { TrackCard, TrackData } from '@/components/TrackCard';
+import { AudioPlayer } from '@/components/AudioPlayer';
+import { AuthModal } from '@/components/AuthModal';
+import { api } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+import { useMeloPlayer } from '@/hooks/useMeloPlayer';
 
-// Vibe taxonomy — matches melo_ui_design_system_1791043062298 mockup
-const mockVibes: VibeItem[] = [
-  { id: "v1", name: "Naija Chill", category: "african", colorHex: "#00E5FF" },
-  { id: "v2", name: "Lagos Night Drive", category: "context", colorHex: "#FF5722" },
-  { id: "v3", name: "Afrobeat Energy", category: "mood", colorHex: "#FFC107" },
-  { id: "v4", name: "Late Night Study", category: "activity", colorHex: "#1DB95D" },
+// Vibe taxonomy — mirrors GET /api/v1/vibes
+const fallbackVibes: VibeItem[] = [
+  { id: 'v1', name: 'Naija Chill', category: 'african', colorHex: '#00E5FF' },
+  { id: 'v2', name: 'Lagos Night Drive', category: 'context', colorHex: '#FF5722' },
+  { id: 'v3', name: 'Afrobeat Energy', category: 'mood', colorHex: '#FFC107' },
+  { id: 'v4', name: 'Late Night Study', category: 'activity', colorHex: '#1DB95D' },
 ];
 
-// Track grid — matches melo_ui_design_system_1791043062298 mockup
-const initialTracks: TrackData[] = [
-  {
-    id: "t1",
-    title: "Rave & Roses",
-    artist: "Rema",
-    album: "Rave & Roses",
-    coverUrl:
-      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&auto=format&fit=crop&q=80",
-    vibe: "Naija Chill",
-    region: "Nigeria",
-    duration: "3:10",
-    isLiked: false,
-    borderColor: "#1DB95D",
-  },
-  {
-    id: "t2",
-    title: "Love, Damini",
-    artist: "Burna Boy",
-    album: "Love, Damini",
-    coverUrl:
-      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80",
-    vibe: "Afrobeat Energy",
-    region: "Nigeria",
-    duration: "3:10",
-    isLiked: false,
-    borderColor: "#FF5722",
-  },
-  {
-    id: "t3",
-    title: "Made In Lagos",
-    artist: "Wizkid",
-    album: "Made In Lagos",
-    coverUrl:
-      "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=80",
-    vibe: "Naija Chill",
-    region: "Nigeria",
-    duration: "3:10",
-    isLiked: false,
-    borderColor: "#E8DCC8",
-  },
-  {
-    id: "t4",
-    title: "Timeless",
-    artist: "Davido",
-    album: "Timeless",
-    coverUrl:
-      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500&auto=format&fit=crop&q=80",
-    vibe: "Afrobeat Energy",
-    region: "Nigeria",
-    duration: "3:10",
-    isLiked: false,
-    borderColor: "#00E5FF",
-  },
-  {
-    id: "t5",
-    title: "For Broken Ears",
-    artist: "Tems",
-    album: "For Broken Ears",
-    coverUrl:
-      "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=500&auto=format&fit=crop&q=80",
-    vibe: "Late Night Study",
-    region: "Nigeria",
-    duration: "3:10",
-    isLiked: false,
-    borderColor: "#FF9800",
-  },
-];
+const GLOW = ['#1DB95D', '#FF5722', '#E8DCC8', '#00E5FF', '#FF9800'];
 
-const nowPlayingDefault: TrackData = {
-  id: "now-playing",
-  title: "Ojuelegba",
-  artist: "Wizkid",
-  album: "Ayo",
-  coverUrl:
-    "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=80",
-  vibe: "Naija Chill",
-  region: "Nigeria",
-  duration: "3:10",
-  isLiked: false,
-};
+function fmtDuration(total: number): string {
+  const m = Math.floor(total / 60);
+  const s = Math.floor(total % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+// Offline-safe cover art: gradient tile with the artist initial (no external images).
+function coverFor(id: string, artist: string, color: string): string {
+  const initial = (artist.charAt(0) || 'M').toUpperCase();
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='500' height='500'>` +
+    `<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>` +
+    `<stop offset='0' stop-color='${color}' stop-opacity='0.85'/>` +
+    `<stop offset='1' stop-color='#141414'/></linearGradient></defs>` +
+    `<rect width='500' height='500' fill='url(#g)'/>` +
+    `<text x='50%' y='58%' font-size='200' text-anchor='middle' ` +
+    `fill='rgba(255,255,255,0.9)' font-family='sans-serif' font-weight='bold'>${initial}</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+interface CatalogueTrack {
+  id: string;
+  title: string;
+  duration: number;
+  genre?: string | null;
+  region?: string | null;
+  artist?: { id: string; name: string } | null;
+  album?: { id: string; title: string } | null;
+}
 
 export default function HomePage() {
-  const [userName] = useState<string>("Chioma");
-  const [selectedVibe, setSelectedVibe] = useState<string>("v1");
-  const [dataSaver, setDataSaver] = useState<boolean>(true);
-  const [currentTrack, setCurrentTrack] = useState<TrackData | null>(nowPlayingDefault);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [tracks, setTracks] = useState<TrackData[]>(initialTracks);
+  const user = useAuth((s) => s.user);
+  const authReady = useAuth((s) => s.ready);
+  const authInit = useAuth((s) => s.init);
+
+  const playQueue = useMeloPlayer((s) => s.playQueue);
+  const playingId = useMeloPlayer((s) => s.track?.id);
+  const playerStatus = useMeloPlayer((s) => s.status);
+  const quality = useMeloPlayer((s) => s.quality);
+  const autoSaver = useMeloPlayer((s) => s.autoSaver);
+  const setQuality = useMeloPlayer((s) => s.setQuality);
+  const initNetwork = useMeloPlayer((s) => s.initNetwork);
+  const needsAuth = useMeloPlayer((s) => s.needsAuth);
+  const clearNeedsAuth = useMeloPlayer((s) => s.clearNeedsAuth);
+
+  const [vibes, setVibes] = useState<VibeItem[]>(fallbackVibes);
+  const [selectedVibe, setSelectedVibe] = useState<string>('v1');
+  const [tracks, setTracks] = useState<TrackData[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [showAuth, setShowAuth] = useState(false);
+
+  useEffect(() => {
+    void authInit();
+    const cleanup = initNetwork();
+    api
+      .tracks('?take=20')
+      .then((list) => {
+        const mapped = (list as CatalogueTrack[]).map((t, i) => {
+          const color = GLOW[i % GLOW.length]!;
+          const artist = t.artist?.name ?? 'Unknown artist';
+          return {
+            id: t.id,
+            title: t.title,
+            artist,
+            album: t.album?.title ?? '',
+            coverUrl: coverFor(t.id, artist, color),
+            vibe: t.genre ?? '',
+            region: t.region ?? '',
+            duration: fmtDuration(t.duration),
+            borderColor: color,
+          };
+        });
+        if (mapped.length > 0) setTracks(mapped as TrackData[]);
+      })
+      .catch((e) => setLoadError(e instanceof Error ? e.message : 'Catalogue unreachable'));
+    return cleanup;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'}/vibes`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => {
+        if (Array.isArray(list) && list.length > 0) {
+          setVibes(
+            list.map((v: { id: string; name: string; category: VibeItem['category']; colorHex: string }) => ({
+              id: v.id,
+              name: v.name,
+              category: v.category,
+              colorHex: v.colorHex,
+            })),
+          );
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (needsAuth) {
+      setShowAuth(true);
+      clearNeedsAuth();
+    }
+  }, [needsAuth, clearNeedsAuth]);
+
+  const dataSaverOn = quality === 'data_saver' || autoSaver;
 
   const handleSelectVibe = (vibe: VibeItem) => {
     setSelectedVibe(vibe.id);
-  };
-
-  const handlePlayTrack = (track: TrackData) => {
-    if (currentTrack?.id === track.id) {
-      setIsPlaying(!isPlaying);
-    } else {
-      setCurrentTrack(track);
-      setIsPlaying(true);
-    }
-  };
-
-  const handleLikeTrack = (track: TrackData) => {
-    setTracks((prev) =>
-      prev.map((t) => (t.id === track.id ? { ...t, isLiked: !t.isLiked } : t))
-    );
+    void api.logEvent({ eventType: 'vibe_select' }).catch(() => undefined);
   };
 
   const handleAiSearch = (prompt: string) => {
-    console.log("AI search prompt:", prompt);
+    void api.logEvent({ eventType: 'search' }).catch(() => undefined);
+    console.log('AI search prompt:', prompt);
   };
 
   return (
@@ -139,66 +148,69 @@ export default function HomePage() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 pb-32">
         <Header
-          dataSaverEnabled={dataSaver}
-          onToggleDataSaver={() => setDataSaver(!dataSaver)}
+          dataSaverEnabled={dataSaverOn}
+          onToggleDataSaver={() => setQuality(dataSaverOn ? 'balanced' : 'data_saver')}
         />
 
         <main className="flex-1 px-6 md:px-10 py-2 space-y-6 max-w-7xl mx-auto w-full">
-          {/* Hero / Greeting Header — matches mockup */}
+          {/* Hero / Greeting Header */}
           <div>
             <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
-              Good Evening, <span className="text-[#1DB95D]">{userName}</span>
+              Good Evening, <span className="text-[#1DB95D]">{user?.name ?? 'Chioma'}</span>
             </h2>
             <p className="text-sm text-zinc-400 mt-2">
               Discover music by feeling, context, and African culture — affordably and reliably.
             </p>
           </div>
 
-          {/* Vibe Pills Filter Bar — matches mockup */}
+          {/* Vibe Pills Filter Bar */}
           <section className="space-y-3">
             <div className="flex items-center gap-2 text-white font-bold text-sm">
               <Compass className="w-4 h-4 text-[#1DB95D]" />
               <span>Choose Your Current Vibe</span>
             </div>
             <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar py-1">
-            {mockVibes.map((vibe) => (
-              <VibePill
-                key={vibe.id}
-                vibe={vibe}
-                isSelected={selectedVibe === vibe.id}
-                onSelect={handleSelectVibe}
-              />
-            ))}
+              {vibes.map((vibe) => (
+                <VibePill
+                  key={vibe.id}
+                  vibe={vibe}
+                  isSelected={selectedVibe === vibe.id}
+                  onSelect={handleSelectVibe}
+                />
+              ))}
             </div>
           </section>
 
-          {/* AI prompt bar — matches mockup single gradient input */}
+          {/* AI prompt bar */}
           <AiPromptBar onSearchAi={handleAiSearch} />
 
-          {/* Track grid — matches mockup 5-card row */}
+          {/* Track grid — live catalogue */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 pt-2">
-            {tracks.map((track) => (
+            {tracks.map((track, i) => (
               <TrackCard
                 key={track.id}
                 track={track}
-                isPlaying={isPlaying && currentTrack?.id === track.id}
-                onPlay={handlePlayTrack}
-                onLike={handleLikeTrack}
+                isPlaying={playerStatus === 'playing' && playingId === track.id}
+                onPlay={() => void playQueue(tracks, i)}
+                onLike={() => undefined}
               />
             ))}
           </div>
+          {authReady && tracks.length === 0 && (
+            <p className="text-xs text-zinc-500">
+              {loadError ? `Catalogue error: ${loadError}` : 'Connecting to the Melo catalogue…'}
+            </p>
+          )}
         </main>
       </div>
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />
 
-      {/* Floating glass player — matches mockup */}
-      <AudioPlayer
-        currentTrack={currentTrack}
-        isPlaying={isPlaying}
-        onTogglePlay={() => setIsPlaying(!isPlaying)}
-      />
+      {/* Live player */}
+      <AudioPlayer />
+
+      <AuthModal open={showAuth} onClose={() => setShowAuth(false)} />
     </div>
   );
 }

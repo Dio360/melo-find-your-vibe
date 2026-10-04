@@ -28,7 +28,16 @@ export function TrackCard({ track, isPlaying, onPlay }: TrackCardProps) {
   return (
     <div
       onClick={() => onPlay(track)}
-      className="group relative rounded-2xl bg-[#1A1A1A] border border-white/10 overflow-hidden transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onPlay(track);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Play ${track.title} by ${track.artist}`}
+      className="group relative rounded-2xl bg-[#1A1A1A] border border-white/10 overflow-hidden transition-all duration-300 hover:-translate-y-1 cursor-pointer focus:outline-none focus:border-[#1DB95D]"
       style={{ boxShadow: `0 0 20px ${glow}33` }}
     >
       {/* Artwork container */}

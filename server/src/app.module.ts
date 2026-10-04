@@ -12,6 +12,7 @@ import { StorageModule } from './modules/storage/storage.module.js';
 import { VibesModule } from './modules/vibes/vibes.module.js';
 import { SearchModule } from './modules/search/search.module.js';
 import { HomeModule } from './modules/home/home.module.js';
+import { EventsModule } from './modules/events/events.module.js';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { HomeModule } from './modules/home/home.module.js';
     VibesModule,
     SearchModule,
     HomeModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

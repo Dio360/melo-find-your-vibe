@@ -12,7 +12,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
-import { coverFor, fmtDuration, glowFor } from '@/lib/vibes';
+import { coverFor, bestCover, fmtDuration, glowFor } from '@/lib/vibes';
 
 interface Hit {
   type: string;
@@ -65,7 +65,7 @@ export default function SearchPage() {
     title: h.title,
     artist: h.subtitle ?? 'Unknown artist',
     album: '',
-    coverUrl: coverFor(h.id, h.subtitle ?? '?', glowFor(i)),
+    coverUrl: bestCover(h.title, h.subtitle ?? '?', glowFor(i)),
     vibe: '',
     region: '',
     duration: '',
@@ -94,7 +94,7 @@ export default function SearchPage() {
         title: pt.track.title,
         artist: pt.track.artist.name,
         album: '',
-        coverUrl: coverFor(pt.track.id, pt.track.artist.name, glowFor(i)),
+        coverUrl: bestCover(pt.track.title, pt.track.artist.name, glowFor(i)),
         vibe: '',
         region: '',
         duration: fmtDuration(pt.track.duration),

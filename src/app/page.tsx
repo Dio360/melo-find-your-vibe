@@ -13,7 +13,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
-import { VIBE_FILTERS, coverFor, fmtDuration, glowFor } from '@/lib/vibes';
+import { VIBE_FILTERS, bestCover, coverFor, fmtDuration, glowFor } from '@/lib/vibes';
 
 // Vibe taxonomy — mirrors GET /api/v1/vibes
 const fallbackVibes: VibeItem[] = [
@@ -37,6 +37,23 @@ interface Artist {
   id: string;
   name: string;
   country: string | null;
+}
+
+function ArtistArt({ name, tracks, index }: { name: string; tracks: TrackData[]; index: number }) {
+  const own = tracks.find((t) => t.artist === name);
+  const src = own ? own.coverUrl : bestCover('', name, glowFor(index));
+  return (
+    <img
+      src={src}
+      alt={name}
+      onError={(e) => {
+        const img = e.currentTarget;
+        if (!img.src.startsWith('data:')) img.src = coverFor('', name, glowFor(index));
+      }}
+      className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border border-white/10 group-hover:border-[#1DB95D] group-hover:scale-105 transition-all"
+      style={{ boxShadow: `0 0 18px ${glowFor(index)}33` }}
+    />
+  );
 }
 
 export default function HomePage() {
@@ -74,7 +91,7 @@ export default function HomePage() {
           title: t.title,
           artist: t.artist?.name ?? 'Unknown artist',
           album: t.album?.title ?? '',
-          coverUrl: coverFor(t.id, t.artist?.name ?? '?', glowFor(i)),
+          coverUrl: bestCover(t.title, t.artist?.name ?? '?', glowFor(i)),
           vibe: t.genre ?? '',
           region: t.region ?? '',
           duration: fmtDuration(t.duration),
@@ -149,7 +166,7 @@ export default function HomePage() {
         title: pt.track.title,
         artist: pt.track.artist.name,
         album: '',
-        coverUrl: coverFor(pt.track.id, pt.track.artist.name, glowFor(i)),
+        coverUrl: bestCover(pt.track.title, pt.track.artist.name, glowFor(i)),
         vibe: '',
         region: '',
         duration: fmtDuration(pt.track.duration),
@@ -259,12 +276,7 @@ export default function HomePage() {
                     title={`Play a ${a.name} vibe`}
                     className="flex flex-col items-center gap-2 shrink-0 group"
                   >
-                    <img
-                      src={coverFor(a.id, a.name, glowFor(i))}
-                      alt={a.name}
-                      className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover border border-white/10 group-hover:border-[#1DB95D] group-hover:scale-105 transition-all"
-                      style={{ boxShadow: `0 0 18px ${glowFor(i)}33` }}
-                    />
+                    <ArtistArt name={a.name} tracks={tracks} index={i} />
                     <span className="text-xs font-bold text-white group-hover:text-[#1DB95D] transition-colors">
                       {a.name}
                     </span>

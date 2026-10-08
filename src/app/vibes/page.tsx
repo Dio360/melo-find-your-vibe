@@ -11,7 +11,7 @@ import { AudioPlayer } from '@/components/AudioPlayer';
 import { AuthModal } from '@/components/AuthModal';
 import { api } from '@/lib/api';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
-import { VIBE_FILTERS, coverFor, fmtDuration, glowFor } from '@/lib/vibes';
+import { VIBE_FILTERS, bestCover, fmtDuration, glowFor } from '@/lib/vibes';
 
 interface CatalogueTrack {
   id: string;
@@ -55,7 +55,7 @@ export default function VibesPage() {
             title: t.title,
             artist: t.artist?.name ?? 'Unknown artist',
             album: t.album?.title ?? '',
-            coverUrl: coverFor(t.id, t.artist?.name ?? '?', glowFor(i)),
+            coverUrl: bestCover(t.title, t.artist?.name ?? '?', glowFor(i)),
             vibe: t.genre ?? '',
             region: t.region ?? '',
             duration: fmtDuration(t.duration),

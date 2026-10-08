@@ -23,6 +23,29 @@ export function glowFor(index: number): string {
   return PALETTE[index % PALETTE.length]!;
 }
 
+// Real cover photos (Unsplash CDN). If any fail to load, components fall
+// back to the offline gradient tile via coverFor.
+const COVER_PHOTOS: Record<string, string> = {
+  'calm-down': 'photo-1511379938547-c1f69419868d',
+  'last-last': 'photo-1511671782779-c97d3d27a1d4',
+  ojuelegba: 'photo-1470225620780-dba8ba36b745',
+  unavailable: 'photo-1459749411175-04bf5292ceea',
+  'free-mind': 'photo-1493225457124-a3eb161ffa5f',
+  sungba: 'photo-1514525253161-7a46d19cd819',
+};
+
+const slugOf = (title: string) => title.toLowerCase().replace(/[^a-z]+/g, '-');
+
+export function coverPhotoFor(title: string): string | null {
+  const id = COVER_PHOTOS[slugOf(title)];
+  return id ? `https://images.unsplash.com/${id}?w=500&auto=format&fit=crop&q=80` : null;
+}
+
+// Real photo when known, offline gradient tile otherwise.
+export function bestCover(title: string, artist: string, color: string): string {
+  return coverPhotoFor(title) ?? coverFor('', artist, color);
+}
+
 // Offline-safe cover art: gradient tile with the artist initial (no external images).
 export function coverFor(id: string, artist: string, color: string): string {
   void id;

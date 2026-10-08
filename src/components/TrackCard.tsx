@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Play, Heart } from "lucide-react";
+import { coverFor } from "@/lib/vibes";
 
 export interface TrackData {
   id: string;
@@ -46,6 +47,12 @@ export function TrackCard({ track, isPlaying, isLiked, onPlay, onLike }: TrackCa
         <img
           src={track.coverUrl}
           alt={track.album}
+          onError={(e) => {
+            const img = e.currentTarget;
+            if (!img.src.startsWith('data:')) {
+              img.src = coverFor('', track.artist, track.borderColor ?? '#1DB95D');
+            }
+          }}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />

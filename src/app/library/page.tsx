@@ -11,7 +11,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
-import { coverFor, fmtDuration, glowFor } from '@/lib/vibes';
+import { bestCover, fmtDuration, glowFor } from '@/lib/vibes';
 
 interface Playlist {
   id: string;
@@ -45,7 +45,7 @@ export default function LibraryPage() {
           title: l.track.title,
           artist: l.track.artist.name,
           album: '',
-          coverUrl: coverFor(l.track.id, l.track.artist.name, glowFor(i)),
+          coverUrl: bestCover(l.track.title, l.track.artist.name, glowFor(i)),
           vibe: '',
           region: '',
           duration: '',
@@ -89,7 +89,7 @@ export default function LibraryPage() {
       title: pt.track.title,
       artist: pt.track.artist.name,
       album: '',
-      coverUrl: coverFor(pt.track.id, pt.track.artist.name, glowFor(i)),
+      coverUrl: bestCover(pt.track.title, pt.track.artist.name, glowFor(i)),
       vibe: '',
       region: '',
       duration: '',

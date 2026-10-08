@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Phone, Mail, MessageSquare } from 'lucide-react';
-import { api, type ApiUser } from '@/lib/api';
+import { api, setToken, type ApiUser } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
 type Method = 'phone' | 'email';
@@ -79,6 +80,8 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
     setBusy(true);
     setError(null);
     try {
+      // Store the session first — the profile update itself requires auth.
+      setToken(pending.token);
       const updated = await api.updateProfile({ name: name.trim() });
       login(pending.token, updated);
       close();
@@ -89,8 +92,10 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+  // Portal out of the header: backdrop-blur/sticky ancestors turn into
+  // containing blocks for fixed children and push the modal off-screen.
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
       <div className="w-full max-w-sm rounded-2xl bg-[#1A1A1A] border border-white/15 p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-lg font-extrabold text-white">Sign in to Melo</h3>
@@ -199,6 +204,7 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
 
         {error && <p className="mt-3 text-xs text-[#FF5722]">{error}</p>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -33,4 +33,8 @@ services:
     command: -p5000 -H0.0.0.0
 
 volumes:
+  # Pre-existing local volume (created outside compose) — kept external so
+  # `docker compose up/down` never wipes the seeded dev catalogue.
   melo-pgdata:
+    name: melo-pgdata
+    external: true

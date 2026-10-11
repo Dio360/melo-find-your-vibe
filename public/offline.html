@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#121212" />
+    <title>MELO — You're offline</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #121212;
+        color: #fff;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        text-align: center;
+      }
+      .mark {
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 24px;
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0 0 8px;
+      }
+      p {
+        color: #a1a1aa;
+        font-size: 0.9rem;
+        margin: 0 0 24px;
+      }
+      button {
+        background: #1db95d;
+        color: #000;
+        border: 0;
+        border-radius: 9999px;
+        padding: 12px 32px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg class="mark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect width="512" height="512" rx="96" fill="#121212" />
+        <path
+          d="M 150 350 L 150 170 L 256 262 L 362 170 L 362 350"
+          fill="none"
+          stroke="#1DB95D"
+          stroke-width="44"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <h1>You're offline</h1>
+      <p>MELO needs a connection to stream music. Check your network and try again.</p>
+      <button onclick="location.reload()">Retry</button>
+    </main>
+  </body>
+</html>

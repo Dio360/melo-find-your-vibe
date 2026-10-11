@@ -12,7 +12,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
-import { coverFor, bestCover, fmtDuration, glowFor } from '@/lib/vibes';
+import { bestCover, glowFor } from '@/lib/vibes';
 
 interface Hit {
   type: string;
@@ -82,30 +82,6 @@ export default function SearchPage() {
     void playQueue(list, Math.max(idx, 0));
   };
 
-  const playArtist = async (name: string) => {
-    if (!user) {
-      setShowAuth(true);
-      return;
-    }
-    try {
-      const res = await api.aiPlaylist(`songs like ${name}`, 10);
-      const mapped = res.playlist.tracks.map((pt, i) => ({
-        id: pt.track.id,
-        title: pt.track.title,
-        artist: pt.track.artist.name,
-        album: '',
-        coverUrl: bestCover(pt.track.title, pt.track.artist.name, glowFor(i)),
-        vibe: '',
-        region: '',
-        duration: fmtDuration(pt.track.duration),
-        borderColor: glowFor(i),
-      })) as TrackData[];
-      if (mapped.length > 0) await playQueue(mapped, 0);
-    } catch {
-      /* surfaced by player error state */
-    }
-  };
-
   return (
     <div className="flex min-h-screen bg-[#121212]">
       <Sidebar />
@@ -168,18 +144,27 @@ export default function SearchPage() {
                   className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{h.title}</p>
+                    {h.type === 'artist' || h.type === 'album' || h.type === 'playlist' ? (
+                      <Link
+                        href={`/${h.type}s/${h.id}`}
+                        className="text-sm font-bold text-white truncate hover:text-[#1DB95D] hover:underline block"
+                      >
+                        {h.title}
+                      </Link>
+                    ) : (
+                      <p className="text-sm font-bold text-white truncate">{h.title}</p>
+                    )}
                     <p className="text-xs text-zinc-400 truncate">
                       {h.type} {h.subtitle ? `· ${h.subtitle}` : ''}
                     </p>
                   </div>
-                  {h.type === 'artist' ? (
-                    <button
-                      onClick={() => void playArtist(h.title)}
-                      className="shrink-0 px-4 py-2 rounded-full bg-[#1DB95D] text-black text-xs font-bold hover:opacity-90"
+                  {h.type === 'artist' || h.type === 'album' || h.type === 'playlist' ? (
+                    <Link
+                      href={`/${h.type}s/${h.id}`}
+                      className="shrink-0 px-4 py-2 rounded-full bg-white/10 text-white text-xs font-bold hover:bg-white/20"
                     >
-                      Play vibe
-                    </button>
+                      Open
+                    </Link>
                   ) : h.type === 'vibe' ? (
                     <Link
                       href="/vibes"

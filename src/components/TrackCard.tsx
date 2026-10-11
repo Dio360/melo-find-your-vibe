@@ -15,6 +15,8 @@ export interface TrackData {
   duration: string;
   isLiked?: boolean;
   borderColor?: string;
+  artistId?: string;
+  albumId?: string;
 }
 
 interface TrackCardProps {

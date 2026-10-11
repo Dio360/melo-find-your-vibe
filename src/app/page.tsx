@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Compass, Mic2 } from 'lucide-react';
+import Link from 'next/link';
+import { Compass, Mic2, Play } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { BottomNav } from '@/components/BottomNav';
 import { Header } from '@/components/Header';
@@ -270,17 +271,29 @@ export default function HomePage() {
               </div>
               <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
                 {artists.map((a, i) => (
-                  <button
-                    key={a.id}
-                    onClick={() => void playAiPrompt(`songs like ${a.name}`)}
-                    title={`Play a ${a.name} vibe`}
-                    className="flex flex-col items-center gap-2 shrink-0 group"
-                  >
-                    <ArtistArt name={a.name} tracks={tracks} index={i} />
-                    <span className="text-xs font-bold text-white group-hover:text-[#1DB95D] transition-colors">
-                      {a.name}
-                    </span>
-                  </button>
+                  <div key={a.id} className="relative shrink-0 group">
+                    <Link
+                      href={`/artists/${a.id}`}
+                      title={`Open ${a.name}`}
+                      className="flex flex-col items-center gap-2"
+                    >
+                      <ArtistArt name={a.name} tracks={tracks} index={i} />
+                      <span className="text-xs font-bold text-white group-hover:text-[#1DB95D] transition-colors">
+                        {a.name}
+                      </span>
+                    </Link>
+                    {/* Hover play: builds an AI vibe for this artist (kept from before). */}
+                    <button
+                      onClick={() => void playAiPrompt(`songs like ${a.name}`)}
+                      title={`Play a ${a.name} vibe`}
+                      aria-label={`Play a ${a.name} vibe`}
+                      className="absolute inset-x-0 top-0 h-24 md:h-28 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <span className="w-10 h-10 rounded-full bg-[#1DB95D] text-black flex items-center justify-center shadow-lg shadow-[#1DB95D]/40">
+                        <Play className="w-4 h-4 fill-black translate-x-0.5" />
+                      </span>
+                    </button>
+                  </div>
                 ))}
               </div>
             </section>

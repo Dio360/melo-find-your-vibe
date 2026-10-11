@@ -96,8 +96,43 @@ export const api = {
       id: string;
       name: string;
       description: string | null;
-      tracks: { track: { id: string; title: string; artist: { name: string } } }[];
+      tracks: { track: { id: string; title: string; duration?: number; artist: { id: string; name: string } } }[];
     }>(`/playlists/${id}`),
+  artistDetail: (id: string) =>
+    request<{
+      id: string;
+      name: string;
+      bio: string | null;
+      image: string | null;
+      country: string | null;
+      region: string | null;
+      verified: boolean;
+      albums: { id: string; title: string; cover: string | null; releaseDate: string | null }[];
+      tracks: { id: string; title: string; duration: number; genre: string | null; albumId: string | null }[];
+    }>(`/catalogue/artists/${id}`),
+  albumDetail: (id: string) =>
+    request<{
+      id: string;
+      title: string;
+      cover: string | null;
+      releaseDate: string | null;
+      artist: { id: string; name: string };
+      tracks: { id: string; title: string; duration: number; explicit: boolean; genre: string | null }[];
+    }>(`/catalogue/albums/${id}`),
+  trackDetail: (id: string) =>
+    request<{
+      id: string;
+      title: string;
+      duration: number;
+      genre: string | null;
+      language: string | null;
+      region: string | null;
+      explicit: boolean;
+      status: string;
+      artist: { id: string; name: string; verified: boolean };
+      album: { id: string; title: string; cover: string | null } | null;
+      rights: { territory: string; streamingAllowed: boolean; status: string }[];
+    }>(`/catalogue/tracks/${id}`),
   searchAll: (q: string, entity?: string) =>
     request<
       { type: string; id: string; title: string; subtitle: string | null; score: number }[]

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Heart, ListMusic, Mic2, History, Trash2, Play } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { BottomNav } from '@/components/BottomNav';
@@ -172,7 +173,12 @@ export default function LibraryPage() {
                       className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10"
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                        <Link
+                          href={`/playlists/${p.id}`}
+                          className="text-sm font-bold text-white truncate hover:text-[#1DB95D] hover:underline block"
+                        >
+                          {p.name}
+                        </Link>
                         <p className="text-xs text-zinc-400">
                           {p._count.tracks} tracks{p.description ? ` · ${p.description}` : ''}
                         </p>

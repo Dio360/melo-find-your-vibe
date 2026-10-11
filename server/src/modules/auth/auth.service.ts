@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { randomInt } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { RedisService } from '../../redis/redis.service.js';
+import { OtpDeliveryService } from './otp-delivery.service.js';
 
 const OTP_TTL_SECONDS = Number(process.env.OTP_TTL_SECONDS ?? 300);
 const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS ?? 5);
@@ -55,6 +56,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly jwt: JwtService,
+    private readonly delivery: OtpDeliveryService,
   ) {}
 
   async requestOtp(dto: RequestOtpDto) {
@@ -71,10 +73,13 @@ export class AuthService {
     const min = 10 ** (OTP_LENGTH - 1);
     const code = String(randomInt(min, max + 1));
 
+    // Deliver first: if the provider fails we never store a code the user
+    // cannot receive, and no cooldown is consumed.
+    await this.delivery.send(identity, code, OTP_TTL_SECONDS);
+
     await redis.set(key, JSON.stringify({ code, attempts: 0 }), 'EX', OTP_TTL_SECONDS);
     await redis.set(`${key}:cooldown`, '1', 'EX', OTP_COOLDOWN_SECONDS);
 
-    // TODO: deliver via SMS (Termii/Africa's Talking) or email provider.
     // Dev convenience only — never return the code in production.
     const isProd = process.env.NODE_ENV === 'production';
     return {

@@ -7,6 +7,7 @@ import {
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import type { RedisService } from '../../redis/redis.service.js';
 import type { JwtService } from '@nestjs/jwt';
+import type { OtpDeliveryService } from './otp-delivery.service.js';
 
 // In-memory stand-in for the small slice of ioredis the service touches.
 function fakeRedis() {
@@ -29,16 +30,19 @@ describe('AuthService', () => {
   let redis: ReturnType<typeof fakeRedis>;
   let prisma: { user: { upsert: ReturnType<typeof vi.fn> } };
   let jwt: { signAsync: ReturnType<typeof vi.fn> };
+  let delivery: { send: ReturnType<typeof vi.fn> };
   let service: AuthService;
 
   beforeEach(() => {
     redis = fakeRedis();
     prisma = { user: { upsert: vi.fn() } };
     jwt = { signAsync: vi.fn().mockResolvedValue('signed.jwt.token') };
+    delivery = { send: vi.fn().mockResolvedValue(undefined) };
     service = new AuthService(
       prisma as unknown as PrismaService,
       { raw: redis } as unknown as RedisService,
       jwt as unknown as JwtService,
+      delivery as unknown as OtpDeliveryService,
     );
     delete process.env.NODE_ENV;
   });
@@ -129,6 +133,29 @@ describe('AuthService', () => {
       process.env.NODE_ENV = 'production';
       const res = await service.requestOtp({ phone: '08012345678' });
       expect(res).not.toHaveProperty('devCode');
+    });
+
+    it('delivers the code through the delivery service before storing', async () => {
+      const res = await service.requestOtp({ phone: '08012345678' });
+      expect(delivery.send).toHaveBeenCalledTimes(1);
+      const [identity, code] = delivery.send.mock.calls[0];
+      expect(identity).toEqual({ kind: 'phone', value: '08012345678' });
+      expect(code).toBe((res as { devCode: string }).devCode);
+    });
+
+    it('does not store a code or start a cooldown when delivery fails', async () => {
+      delivery.send.mockRejectedValue(new Error('provider down'));
+      await expect(service.requestOtp({ phone: '08012345678' })).rejects.toThrow(/provider down/);
+      expect(redis.store.has('otp:phone:08012345678')).toBe(false);
+      expect(redis.store.has('otp:phone:08012345678:cooldown')).toBe(false);
+    });
+
+    it('allows an immediate retry after a failed delivery', async () => {
+      delivery.send.mockRejectedValueOnce(new Error('provider down'));
+      await expect(service.requestOtp({ phone: '08012345678' })).rejects.toThrow();
+      await expect(service.requestOtp({ phone: '08012345678' })).resolves.toMatchObject({
+        ok: true,
+      });
     });
   });
 

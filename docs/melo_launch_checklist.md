@@ -19,8 +19,10 @@
 - [x] OTP max-attempts lockout and cooldown are enforced (covered by tests).
 - [x] One-time-use codes are consumed on successful verify (covered by tests).
 - [x] JWT guard rejects missing/invalid bearer tokens (401s confirmed live).
+- [x] **OTP delivery is wired** (`otp-delivery.service.ts`): phone → Termii SMS, email → Resend. Delivery runs *before* the code is stored, so a provider failure stores nothing and consumes no cooldown (covered by tests).
+- [x] Production fails loudly: a missing `TERMII_API_KEY` / `RESEND_API_KEY`+`EMAIL_FROM` makes `/auth/otp/request` return 503 for that channel instead of silently accepting undeliverable logins. Dev keeps the devCode fallback (confirmed live).
 
-**Before launch:** wire a real SMS/email provider (Termii / Africa's Talking) to replace the dev-code path — the TODO is in `auth.service.ts`.
+**Before launch:** create Termii + Resend accounts and set `TERMII_API_KEY`, `TERMII_SENDER_ID`, `RESEND_API_KEY`, `EMAIL_FROM` in the hosting platform's secret store.
 
 ## 3. Rights-before-scale (PRD §4.9) — VERIFIED
 
@@ -65,12 +67,20 @@
 
 ## 8. Open items requiring a decision/account (cannot be completed from code alone)
 
-- [ ] Real SMS/email OTP provider (replaces dev-code path).
+- [ ] Real SMS/email OTP provider **accounts + keys** (Termii / Resend) — the integration is wired; only the credentials are missing.
 - [ ] Sentry project + `SENTRY_DSN`.
 - [ ] LogRocket project + `NEXT_PUBLIC_LOGROCKET_APP_ID`.
 - [ ] Metrics backend for infra/playback/business metrics (§5 open list).
 - [ ] Production Postgres + Redis + R2 provisioning and connection strings.
-- [ ] **CORS allowlist** — `app.enableCors()` in `server/src/main.ts` is currently wide open (any origin). Restrict to the deployed web origin before public launch.
+- [x] **CORS allowlist** — env-driven via `CORS_ORIGINS` (`config/cors.ts`). Dev defaults to localhost:3000; **production refuses to boot** without an explicit allowlist. Allowed-origin echo + disallowed-origin block both confirmed live.
 - [ ] Custom domain + TLS (handled by chosen platform).
 - [ ] Privacy review (PRD §Nigerian/international obligations) signed off by a professional before public launch.
 - [ ] Pricing validated via user research (PRD §launch strategy).
+
+## 9. Search relevance (PRD §15) — WIRED
+
+- [x] Synonym / alternative-spelling expansion (`search-synonyms.ts`): afrobeats↔afro beats, amapiano, highlife, hip hop, r&b, naija↔nigeria, alté↔alte; diacritics + `&` + hyphen normalization.
+- [x] Artist aliases resolve to the canonical name (wizzy/starboy → Wizkid, obo → Davido).
+- [x] Rows match on ANY variant, but score against the user's ORIGINAL words — a synonym widens the net without outranking a direct hit (dedup by best score).
+- [x] Track search matches artist name, genre, and region; album search matches artist name — so "burna" returns artist + songs + albums (the PRD's own worked example, confirmed live).
+- [ ] Synonym/alias list is a curated seed — extend from real search analytics before leaning on it (PRD keeps the taxonomy editable).

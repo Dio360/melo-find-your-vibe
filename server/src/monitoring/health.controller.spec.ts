@@ -39,7 +39,10 @@ describe('HealthController', () => {
     try {
       await controller.getHealth();
     } catch (e) {
-      const body = (e as ServiceUnavailableException).getResponse() as any;
+      const body = (e as ServiceUnavailableException).getResponse() as {
+        status: string;
+        checks: Record<string, { status: string }>;
+      };
       expect(body.status).toBe('degraded');
       expect(body.checks.postgres.status).toBe('down');
       expect(body.checks.redis.status).toBe('up');

@@ -83,12 +83,14 @@ describe('AiPlaylistService', () => {
     prisma.playlist.create.mockResolvedValue({ id: 'pl1', name: 'Vibe', description: 'x' });
     prisma.playlistTrack.createMany.mockResolvedValue({ count: cands.length });
     // Echo back whatever tracks were persisted so the return shape is realistic.
-    prisma.playlist.findUniqueOrThrow.mockImplementation(async ({ where }: any) => ({
-      id: where.id,
-      name: 'Vibe',
-      description: 'x',
-      tracks: (prisma.playlistTrack.createMany.mock.calls[0]?.[0]?.data ?? []).map(
-        (row: any) => ({
+    prisma.playlist.findUniqueOrThrow.mockImplementation(
+      async ({ where }: { where: { id: string } }) => ({
+        id: where.id,
+        name: 'Vibe',
+        description: 'x',
+        tracks: (
+          prisma.playlistTrack.createMany.mock.calls[0]?.[0]?.data ?? []
+        ).map((row: { trackId: string; position: number }) => ({
           position: row.position,
           track: {
             id: row.trackId,

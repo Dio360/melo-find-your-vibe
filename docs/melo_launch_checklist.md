@@ -68,7 +68,7 @@ it to the live workspace (name collisions). Live services + IDs:
 - [x] `server/Dockerfile` multi-stage build (build → slim runtime), runs `prisma migrate deploy` on start, enables trgm idempotently.
 - [x] `server/.dockerignore` excludes `.env`, `node_modules`, `dist`, secrets.
 - [x] `docker-compose.yml` pins the Postgres volume as `external` so `up/down` never wipes the seeded catalogue.
-- [x] **LIVE on Render free tier** (2026-10-11) — API `https://melo-api-72jn.onrender.com` (Docker), web `https://melo-web-dbze.onrender.com` (Node), plus Key Value + Postgres. Railway rejected earlier: no free tier. Free-tier caveats (shared 750 instance-hrs, sleeping services, cold starts) and the Neon migration path for the Postgres that **expires 2026-11-10** are in `melo_deployment.md` §2.
+- [x] **LIVE on Render free tier** (2026-10-11) — API `https://melo-api-72jn.onrender.com` (Docker), web `https://melo-web-dbze.onrender.com` (Node), plus Key Value + Postgres. Railway rejected earlier: no free tier. Free-tier caveats (shared 750 instance-hrs, sleeping services, cold starts) are in `melo_deployment.md` §2. Postgres **migrated to Neon free on 2026-10-12** (the Render DB it replaced expires 2026-11-10).
 
 ## 8. Open items requiring a decision/account (cannot be completed from code alone)
 
@@ -76,7 +76,7 @@ it to the live workspace (name collisions). Live services + IDs:
 - [ ] Sentry project + `SENTRY_DSN`.
 - [ ] LogRocket project + `NEXT_PUBLIC_LOGROCKET_APP_ID`.
 - [ ] Metrics backend for infra/playback/business metrics (§5 open list).
-- [x] **Hosting: Render free tier — PROVISIONED AND LIVE** (2026-10-11, via Render API; see `melo_deployment.md` §2 for service IDs/URLs). Catalogue seeded (7 vibes / 6 artists / 6 albums / 6 tracks). Remaining manual account bits: Cloudflare R2 bucket + keys; **free Postgres expires 2026-11-10 → migrate to Neon free before then** (documented).
+- [x] **Hosting: Render free tier — PROVISIONED AND LIVE** (2026-10-11, via Render API; see `melo_deployment.md` §2 for service IDs/URLs). Catalogue seeded (7 vibes / 6 artists / 6 albums / 6 tracks). Remaining manual account bits: Cloudflare R2 bucket + keys. **Postgres migrated to Neon free (2026-10-12)** — full `pg_dump`/`pg_restore` copy, `DATABASE_URL` flipped, search verified live; no expiry clock anymore.
 - [x] **CORS allowlist** — env-driven via `CORS_ORIGINS` (`config/cors.ts`). Dev defaults to localhost:3000; **production refuses to boot** without an explicit allowlist. Allowed-origin echo + disallowed-origin block both confirmed live. Live value: `https://melo-web-dbze.onrender.com` (Render's suffixed service URL), confirmed echoing on the live API.
 - [x] **PWA** — manifest, icons, service worker, offline page, install UI shipped and verified (§10).
 - [ ] Custom domain + TLS (optional; `*.onrender.com` ships with TLS — revisit after the name is settled; rebuild the TWA/APK if the host changes).

@@ -22,8 +22,10 @@
 #
 # Free-tier notes:
 #   - Free web services sleep after ~15 min idle; first request takes ~50 s.
-#   - Free Postgres (melo-db) EXPIRES ~30 days after creation — migrate to
-#     Neon free (no expiry) before then; steps in melo_deployment.md.
+#   - Postgres: LIVE DB IS NOW NEON FREE (project melo-db / snowy-credit-62106713,
+#     branch production, no expiry) — migrated 2026-10-12, full pg_dump copy.
+#     The Render database below is retired; it expired/expired-on 2026-11-10.
+#     DATABASE_URL on the live melo-api points at the Neon direct endpoint.
 
 services:
   # ---- NestJS API (Docker; runs `prisma migrate deploy` then serves) ----
@@ -37,6 +39,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Reference only: the live service's DATABASE_URL was first filled from
+      # this Render database, then migrated to Neon free (2026-10-12) — see
+      # the free-tier notes at the top. A fresh workspace would re-provision
+      # below and `sync` this key as before.
       - key: DATABASE_URL
         fromDatabase:
           name: melo-db
@@ -113,8 +119,9 @@ services:
     ipAllowList: []
 
 databases:
-  # ⚠️ Free Postgres expires ~30 days after creation (14-day grace).
-  # Migrate to Neon free before then — docs/melo_deployment.md.
+  # RETIRED (2026-10-12): live DATABASE_URL now points at Neon free
+  # (project melo-db / snowy-credit-62106713). This Render free DB would
+  # have expired 2026-11-10; safe to remove from a fresh workspace.
   - name: melo-db
     plan: free
     databaseName: melo

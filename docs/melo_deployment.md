@@ -41,7 +41,7 @@ Free-tier inventory for the whole launch:
 | Piece | Service | Free limit | Caveat |
 |---|---|---|---|
 | API + web hosting | Render web services ×2 | 750 hrs/mo shared; sleep after ~15 min | First request after idle takes ~50 s (cold start) |
-| Postgres | Render free DB (`melo-db`) | 0.5–1 GB | **Expires ~30 days** → migrate to **Neon free** (0.5 GB, no expiry); `pg_trgm` supported |
+| Postgres | **Neon free** (`melo-db`, project `snowy-credit-62106713`) | 0.5 GB, ~190 compute-hrs/mo | **Migrated from Render free DB on 2026-10-12** (that DB would have expired 2026-11-10); compute autosuspends when idle and wakes on connect; `pg_trgm` verified |
 | Redis | Render Key Value (`melo-kv`) | 25 MB, no persistence | Fine — OTP codes are ephemeral by design |
 | Audio storage | Cloudflare R2 | 10 GB, **zero egress fees** | Audio streams bypass Render entirely — egress never hits the 5 GB web bandwidth cap |
 | Email OTP | Resend free | 3,000/month, 100/day | Sandbox sender until you verify your own domain |
@@ -89,11 +89,29 @@ external connections require `?sslmode=require` in the URL).
   `JWT_SECRET`…) live in the env-vars store, never in the repo.
 - Pushes to `main` auto-deploy both services (`autoDeploy: yes`).
 
-> ⚠️ **Free Postgres expires ~30 days after creation** (14-day grace, then
-> deleted). Before day 25: create a **Neon** free project, run
-> `npx prisma migrate deploy` against it with `DATABASE_URL` pointed at Neon,
-> copy data (`pg_dump melo | psql $NEON_URL`), then update `DATABASE_URL` in
-> the Render dashboard. Nothing else changes.
+> ✅ **Done (2026-10-12): migrated off Render Postgres to Neon free** before
+> the Render DB's expiry. As-built record:
+>
+> - **Neon**: project `melo-db` (`snowy-credit-62106713`), Postgres 17, branch
+>   `production`, org `org-young-night-06025796`. Direct endpoint
+>   `ep-solitary-rain-b55a4k8y.c-7.us-east-2.aws.neon.tech` (local `.env.local`
+>   holds both pooled + unpooled URLs, gitignored).
+> - **Copy**: `pg_dump -Fc --no-owner --no-privileges` from Render (external
+>   URL) via a `postgres:17-alpine` container, `pg_restore` into Neon. Verified
+>   identical: all 17 tables (6 albums / 6 artists / 6 tracks / 7 vibes /
+>   6 audio assets / 6 content rights / 6 track versions), `pg_trgm` extension,
+>   4 finished `_prisma_migrations` rows.
+> - **Cutover**: `DATABASE_URL` on `melo-api` → Neon **direct** (unpooled)
+>   endpoint with `?sslmode=require`. Direct, not `-pooler`, because the
+>   container runs `prisma migrate deploy` on boot — DDL must not go through
+>   PgBouncer. One service instance → direct endpoint is correct anyway.
+> - **Access dance for the dump**: Render blocks external connections unless
+>   the source IP is allowlisted — `PATCH /v1/postgres/{id}` with
+>   `ipAllowList: [{cidrBlock, description}]` (temporarily added the operator
+>   IP, dumped, restored to `[]` = internal-only).
+> - **Render DB now**: inert backup. It sleeps and expires **2026-11-10** on
+>   its own, or delete it in the dashboard once comfortable — nothing points
+>   at it anymore.
 
 ### Custom domain + TLS
 

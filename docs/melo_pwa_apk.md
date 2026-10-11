@@ -1,8 +1,8 @@
 # MELO — PWA & Android APK
 
 > Status: **PWA done and verified** (commit with `app/manifest.ts`).
-> APK: toolchain ready; the final build runs after the Render deploy is live
-> (a TWA wraps a live HTTPS URL — see [Why not now](#why-not-now)).
+> APK: **built against the live site** — Render deploy is live
+> (`https://melo-web-dbze.onrender.com`), see [Build log](#build-log).
 
 ## 1. The PWA (done)
 
@@ -53,22 +53,35 @@ bubblewrap build    # → app-release-signed.apk (+ .aab for Play Store)
 ```
 
 Digital Asset Links are already wired:
-`https://melo-web.onrender.com/.well-known/assetlinks.json` (from
+`https://melo-web-dbze.onrender.com/.well-known/assetlinks.json` (from
 `public/.well-known/assetlinks.json`, fingerprint of `android/melo-twa.keystore`).
 
-### Why not now
+### Build log
 
-A TWA is a *shell around a live URL*. Bubblewrap fetches the app manifest over
-HTTPS from the production origin, and the APK is only meaningful once that
-origin serves the app. The Render deploy (see `melo_deployment.md`) makes
-`https://melo-web.onrender.com` live; the two commands above then produce the
-APK against it. Everything that can be prepared in advance is prepared:
-toolchain (JDK 17 + Bubblewrap), signing keystore, package identity
-(`app.melo.web`), assetlinks fingerprint, and docs.
+The TWA host was flipped from localhost to production
+(`melo-web-dbze.onrender.com` — Render appends a random suffix to new
+service names; the bare name is not available). Then:
+
+1. `bubblewrap update` — fetched the live `manifest.webmanifest` and
+   generated the Android project **in place** in `android/` (Gradle files,
+   `app/`, `gradle/` — all gitignored, regenerable). Bumped versionCode to 2.
+2. `bubblewrap build` with `BUBBLEWRAP_KEYSTORE_PASSWORD`/`BUBBLEWRAP_KEY_PASSWORD`
+   set (skips the interactive password prompt) →
+   `android/app-release-signed.apk` (0.92 MB) + `app-release-bundle.aab`.
+
+Build-machine quirks worth remembering (all solved, see `android/README.md`):
+bubblewrap's SDK validator wants `<sdk>/bin` or `<sdk>/tools` at the SDK root
+(modern SDKs don't have either — an empty `<sdk>/bin` plus a forwarding
+`sdkmanager.bat` shim satisfies it), it pins build-tools `36.1.0`
+(pre-installed via `sdkmanager` to avoid its interactive installer), it
+invokes `java.exe` unquoted (so `jdkPath` must be space-free — a junction
+`C:\jdk-17` points at the real JDK), and the generated project needed
+`minSdkVersion` 24 (androidbrowserhelper 2.7.4) plus an explicit
+`splashScreenFadeOutDuration` in `twa-manifest.json`.
 
 ### Alternative without any local toolchain
 
-[PWABuilder](https://www.pwabuilder.com) — paste `https://melo-web.onrender.com`,
+[PWABuilder](https://www.pwabuilder.com) — paste `https://melo-web-dbze.onrender.com`,
 download the Android package. Useful on a machine without the JDK/SDK; it
 produces the same kind of TWA (with its own signing key, so its own
 assetlinks fingerprint).

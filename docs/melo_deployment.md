@@ -49,21 +49,45 @@ Free-tier inventory for the whole launch:
 | Error monitoring | Sentry Developer | 5,000 errors/month | Paste DSN to enable |
 | Session replay | LogRocket | 1,000 sessions/month | Paste app ID to enable |
 
-### Render deploy sequence (one-click)
+### What is actually provisioned (as of 2026-10-11, live)
 
-1. Push this repo to GitHub (Blueprint reads `render.yaml` from the branch root).
-2. Render dashboard → **New +** → **Blueprint** → connect the repo → **Apply**.
-   Render reads `render.yaml` and creates `melo-api` (Docker), `melo-web`
-   (Node), `melo-kv` (Key Value), and `melo-db` (Postgres), wiring
-   `DATABASE_URL`/`REDIS_URL` automatically.
-3. The deploy form prompts for every `sync: false` key (Groq, Termii, Resend,
-   R2, Sentry, LogRocket). You can fill them later — the app degrades
-   gracefully: AI search falls back to the rule parser, and OTP endpoints
-   return a 503 that names the missing key.
-4. Seed once: `melo-api` → **Shell** → `node prisma/seed.mjs` (idempotent).
-5. Smoke-check per §5. The public URLs are deterministic from the service
-   names: API `https://melo-api.onrender.com`, web `https://melo-web.onrender.com`.
-   `CORS_ORIGINS` and `NEXT_PUBLIC_API_URL` are pre-wired to exactly these.
+All infra was created via the Render REST API (the Blueprints API is
+early-access gated). `render.yaml` stays the env-var source of truth and a
+ready blueprint for a *fresh* workspace — do **not** apply it to this
+workspace, the names now collide with the live services.
+
+| Resource | ID | URL / endpoint |
+|---|---|---|
+| `melo-api` (web service, Docker, oregon, free) | `srv-db5vtc5ckfvc73bkq0fg` | **https://melo-api-72jn.onrender.com** |
+| `melo-web` (web service, Node, oregon, free) | `srv-db5vrrks728c7397or4g` | **https://melo-web-dbze.onrender.com** |
+| `melo-kv` (Key Value, free) | `red-db5vmf4s728c7397719g` | internal only: `redis://red-db5vmf4s728c7397719g:6379` |
+| `melo-db` (Postgres 17, free) | `dpg-db5vn6vavr4c73a8cskg-a` | internal only; **expires 2026-11-10** |
+
+> ⚠️ **Render no longer grants bare `*.onrender.com` names** — new services get
+> a random suffix (`melo-api-72jn`, `melo-web-dbze`). `CORS_ORIGINS` and
+> `NEXT_PUBLIC_API_URL` are wired to these **suffixed** URLs. If a service is
+> ever recreated, update both env vars to the new URL and rebuild the APK
+> (the TWA pins the web host).
+
+> ⚠️ **Instance-hours math:** the 750 free instance-hours/month are shared by
+> *both* web services, so continuous uptime for the pair is impossible
+> (2 × ~730 h needed). This is fine in practice: sleeping consumes no hours,
+> so light/demo traffic stays under budget. Heavy traffic → upgrade one
+> service (Render Starter, always-on) or move the web app elsewhere.
+
+Seed data loaded (7 vibes, 6 artists, 6 albums, 6 tracks). Re-seed any time:
+either dashboard **Shell** → `node prisma/seed.mjs`, or from a machine whose
+IP you temporarily allowlist (empty `ipAllowList` = internal-only access;
+external connections require `?sslmode=require` in the URL).
+
+### Managing services after launch
+
+- Dashboard: https://dashboard.render.com (service IDs above deep-link there).
+- API: same operations used for provisioning — `PATCH /v1/services/{id}`,
+  `PUT /v1/services/{id}/env-vars`, `POST /v1/services/{id}/deploys`,
+  `GET /v1/services/{id}/deploys` for status. Secrets (`GROQ_API_KEY`,
+  `JWT_SECRET`…) live in the env-vars store, never in the repo.
+- Pushes to `main` auto-deploy both services (`autoDeploy: yes`).
 
 > ⚠️ **Free Postgres expires ~30 days after creation** (14-day grace, then
 > deleted). Before day 25: create a **Neon** free project, run
@@ -126,7 +150,7 @@ Set these in the platform's **secret store**, never in the repo. `server/.env.ex
 
 These need a human decision or account, so they stay open in the checklist:
 
-- Termii / Resend / Sentry / LogRocket account creation and keys (Render prompts for them at deploy time).
+- Termii / Resend / Sentry / LogRocket account creation and keys (paste into the services' env vars in the Render dashboard when the accounts exist).
 - Cloudflare account + R2 bucket and API credentials.
 - Optional custom domain purchase + DNS.
 - Privacy review (Nigerian + international obligations) and pricing validation.

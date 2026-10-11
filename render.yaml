@@ -1,10 +1,20 @@
-# MELO — Render Blueprint (free tier first)
+# MELO — Render reference config (free tier first)
 #
-# One-click deploy: Render dashboard → New → Blueprint → connect this GitHub
-# repo (Dio360/melo-find-your-vibe) → Apply. Render reads this file and
-# provisions everything below.
+# ⚠️ These services are ALREADY LIVE in the "My Workspace" Render account
+# (provisioned via the Render REST API on 2026-10-11 — the Blueprints API
+# is early-access gated). Do NOT apply this file as a Blueprint to that
+# workspace: the names collide with the live services. IDs and URLs:
+#   melo-api  srv-db5vtc5ckfvc73bkq0fg  https://melo-api-72jn.onrender.com
+#   melo-web  srv-db5vrrks728c7397or4g  https://melo-web-dbze.onrender.com
+#   melo-kv   red-db5vmf4s728c7397719g  redis://red-db5vmf4s728c7397719g:6379
+#   melo-db   dpg-db5vn6vavr4c73a8cskg-a  (free, EXPIRES 2026-11-10)
+# Render appends a random suffix to new service names — the bare
+# melo-api/melo-web onrender.com names below no longer exist. This file stays
+# the env-var inventory source of truth and a working blueprint for a FRESH
+# workspace (update the two URL literals below to whatever suffixes Render
+# assigns there).
 #
-# Post-deploy (one time, ~10 min): see docs/melo_deployment.md § Render
+# Post-deploy (one time, ~10 min): see docs/melo_deployment.md §2
 #   1. Fill the sync:false env vars when prompted (GROQ, Termii, Resend, R2…).
 #   2. Seed the catalogue: Render dashboard → melo-api → Shell →
 #        node prisma/seed.mjs
@@ -40,9 +50,9 @@ services:
       - key: JWT_SECRET
         generateValue: true
       # The API refuses to boot in production without this allowlist.
-      # Service URLs are deterministic from the names below.
+      # Live value = the deployed web service's (suffixed) URL.
       - key: CORS_ORIGINS
-        value: https://melo-web.onrender.com
+        value: https://melo-web-dbze.onrender.com
       # AI search parsing — fails closed to the rule parser when the key is
       # absent, so the app still works before the Groq key is pasted.
       - key: AI_PARSER
@@ -89,10 +99,10 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "24"
-      # NEXT_PUBLIC_* vars are inlined at build time — must match melo-api's
-      # onrender.com URL (deterministic from the service name above).
+      # NEXT_PUBLIC_* vars are inlined at build time — must match the live
+      # melo-api URL (Render appends a random suffix to service names).
       - key: NEXT_PUBLIC_API_URL
-        value: https://melo-api.onrender.com/api/v1
+        value: https://melo-api-72jn.onrender.com/api/v1
       - key: NEXT_PUBLIC_LOGROCKET_APP_ID
         sync: false
 

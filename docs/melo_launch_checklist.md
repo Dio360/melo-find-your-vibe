@@ -57,14 +57,18 @@
 - [x] Server job: `npm ci` → `prisma generate` → oxlint → `tsc --noEmit` → `vitest` (75 tests, all green locally).
 - [x] Concurrency cancels superseded runs on the same ref.
 
-**Before launch:** the Render Blueprint (`render.yaml`) is the deploy path — push to GitHub, then New + → Blueprint → connect repo. Secrets are prompted per `sync: false` key at that point (§1).
+**Deploy path (executed):** services were provisioned via the Render REST API
+(the Blueprints API is early-access gated). `render.yaml` remains the
+env-var source of truth and a blueprint for a fresh workspace — do not apply
+it to the live workspace (name collisions). Live services + IDs:
+`melo_deployment.md` §2.
 
 ## 7. Container & deploy readiness — READY
 
 - [x] `server/Dockerfile` multi-stage build (build → slim runtime), runs `prisma migrate deploy` on start, enables trgm idempotently.
 - [x] `server/.dockerignore` excludes `.env`, `node_modules`, `dist`, secrets.
 - [x] `docker-compose.yml` pins the Postgres volume as `external` so `up/down` never wipes the seeded catalogue.
-- [x] **Platform decided: Render free tier** (`render.yaml` Blueprint) — API (Docker), web (Node), Key Value, Postgres, with `DATABASE_URL`/`REDIS_URL` auto-wired. Railway rejected: no free tier (trial credit only). Free-tier caveats and the Neon migration path for the expiring free Postgres are in `melo_deployment.md` §2.
+- [x] **LIVE on Render free tier** (2026-10-11) — API `https://melo-api-72jn.onrender.com` (Docker), web `https://melo-web-dbze.onrender.com` (Node), plus Key Value + Postgres. Railway rejected earlier: no free tier. Free-tier caveats (shared 750 instance-hrs, sleeping services, cold starts) and the Neon migration path for the Postgres that **expires 2026-11-10** are in `melo_deployment.md` §2.
 
 ## 8. Open items requiring a decision/account (cannot be completed from code alone)
 
@@ -72,8 +76,8 @@
 - [ ] Sentry project + `SENTRY_DSN`.
 - [ ] LogRocket project + `NEXT_PUBLIC_LOGROCKET_APP_ID`.
 - [ ] Metrics backend for infra/playback/business metrics (§5 open list).
-- [x] **Hosting decided: Render free tier** — provisioning happens by applying the committed `render.yaml` Blueprint (see `melo_deployment.md` §2). Remaining manual account bits: Cloudflare R2 bucket + keys; **free Postgres expires ~30 days → migrate to Neon free** (documented).
-- [x] **CORS allowlist** — env-driven via `CORS_ORIGINS` (`config/cors.ts`). Dev defaults to localhost:3000; **production refuses to boot** without an explicit allowlist. Allowed-origin echo + disallowed-origin block both confirmed live. The Blueprint pre-wires it to `https://melo-web.onrender.com`.
+- [x] **Hosting: Render free tier — PROVISIONED AND LIVE** (2026-10-11, via Render API; see `melo_deployment.md` §2 for service IDs/URLs). Catalogue seeded (7 vibes / 6 artists / 6 albums / 6 tracks). Remaining manual account bits: Cloudflare R2 bucket + keys; **free Postgres expires 2026-11-10 → migrate to Neon free before then** (documented).
+- [x] **CORS allowlist** — env-driven via `CORS_ORIGINS` (`config/cors.ts`). Dev defaults to localhost:3000; **production refuses to boot** without an explicit allowlist. Allowed-origin echo + disallowed-origin block both confirmed live. Live value: `https://melo-web-dbze.onrender.com` (Render's suffixed service URL), confirmed echoing on the live API.
 - [x] **PWA** — manifest, icons, service worker, offline page, install UI shipped and verified (§10).
 - [ ] Custom domain + TLS (optional; `*.onrender.com` ships with TLS — revisit after the name is settled; rebuild the TWA/APK if the host changes).
 - [ ] Privacy review (PRD §Nigerian/international obligations) signed off by a professional before public launch.
@@ -87,7 +91,7 @@
 - [x] Track search matches artist name, genre, and region; album search matches artist name — so "burna" returns artist + songs + albums (the PRD's own worked example, confirmed live).
 - [ ] Synonym/alias list is a curated seed — extend from real search analytics before leaning on it (PRD keeps the taxonomy editable).
 
-## 10. PWA & Android APK — PWA VERIFIED / APK PREPARED
+## 10. PWA & Android APK — VERIFIED (both live)
 
 - [x] Web manifest (`src/app/manifest.ts`) — standalone display, 192/512/maskable icons; served at `/manifest.webmanifest` (verified live).
 - [x] App icons generated from one SVG source (`scripts/generate-icons.mjs`, sharp) — brand-consistent set incl. iOS apple-icon + favicon.
@@ -97,5 +101,5 @@
 - [x] Offline fallback page (`public/offline.html`).
 - [x] Digital Asset Links served at `/.well-known/assetlinks.json` (keystore fingerprint embedded).
 - [x] APK toolchain prepared: JDK 17 + Bubblewrap CLI, signing keystore (`android/melo-twa.keystore`), `twa-manifest.json` (package `app.melo.web`), full runbook (`android/README.md`).
-- [ ] **APK build** — runs after the Render deploy is live: `cd android && bubblewrap update && bubblewrap build` (a TWA wraps the production HTTPS URL; docs/melo_pwa_apk.md).
+- [x] **APK built against the live site** (2026-10-11): `android/app-release-signed.apk` (0.92 MB, package `app.melo.web`, minSdk 24 / targetSdk 36) + `app-release-bundle.aab` for Play. Signature SHA-256 matches the live `/.well-known/assetlinks.json` → full-screen TWA. Gotchas fixed en route (all documented in `android/README.md`): minSdk 23→24 (androidbrowserhelper 2.7.4), missing `splashScreenFadeOutDuration` field, space-free JDK path, build-tools 36.1.0.
 - [ ] Decide: sideload the APK directly vs. Google Play (AAB + $25 Play Console + store review).

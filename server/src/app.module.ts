@@ -17,10 +17,12 @@ import { LibraryModule } from './modules/library/library.module.js';
 import { PlaylistsModule } from './modules/playlists/playlists.module.js';
 import { RecommendationsModule } from './modules/recommendations/recommendations.module.js';
 import { AiModule } from './modules/ai/ai.module.js';
+import { MonitoringModule } from './monitoring/monitoring.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    MonitoringModule,
     PrismaModule,
     RedisModule,
     StorageModule,

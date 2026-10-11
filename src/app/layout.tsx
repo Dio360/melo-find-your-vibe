@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { MonitoringProvider } from "@/components/MonitoringProvider";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -21,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${plusJakartaSans.variable} h-full antialiased dark`}>
       <body className="min-h-full flex flex-col bg-[#121212] text-white selection:bg-[#1DB95D] selection:text-black">
-        {children}
+        <MonitoringProvider>{children}</MonitoringProvider>
       </body>
     </html>
   );

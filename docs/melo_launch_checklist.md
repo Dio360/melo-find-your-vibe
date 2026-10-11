@@ -57,23 +57,25 @@
 - [x] Server job: `npm ci` → `prisma generate` → oxlint → `tsc --noEmit` → `vitest` (75 tests, all green locally).
 - [x] Concurrency cancels superseded runs on the same ref.
 
-**Before launch:** add a deploy workflow (the server `Dockerfile` is production-ready: `prisma migrate deploy` + `node dist/main`). Choose a platform (Railway / Render / Fly) and wire the secrets from §1.
+**Before launch:** the Render Blueprint (`render.yaml`) is the deploy path — push to GitHub, then New + → Blueprint → connect repo. Secrets are prompted per `sync: false` key at that point (§1).
 
 ## 7. Container & deploy readiness — READY
 
 - [x] `server/Dockerfile` multi-stage build (build → slim runtime), runs `prisma migrate deploy` on start, enables trgm idempotently.
 - [x] `server/.dockerignore` excludes `.env`, `node_modules`, `dist`, secrets.
 - [x] `docker-compose.yml` pins the Postgres volume as `external` so `up/down` never wipes the seeded catalogue.
+- [x] **Platform decided: Render free tier** (`render.yaml` Blueprint) — API (Docker), web (Node), Key Value, Postgres, with `DATABASE_URL`/`REDIS_URL` auto-wired. Railway rejected: no free tier (trial credit only). Free-tier caveats and the Neon migration path for the expiring free Postgres are in `melo_deployment.md` §2.
 
 ## 8. Open items requiring a decision/account (cannot be completed from code alone)
 
-- [ ] Real SMS/email OTP provider **accounts + keys** (Termii / Resend) — the integration is wired; only the credentials are missing.
+- [ ] Real SMS/email OTP provider **accounts + keys** (Termii / Resend) — the integration is wired; only the credentials are missing. (Termii is pay-per-unit: launch email-OTP-first on Resend's free 3,000/month.)
 - [ ] Sentry project + `SENTRY_DSN`.
 - [ ] LogRocket project + `NEXT_PUBLIC_LOGROCKET_APP_ID`.
 - [ ] Metrics backend for infra/playback/business metrics (§5 open list).
-- [ ] Production Postgres + Redis + R2 provisioning and connection strings.
-- [x] **CORS allowlist** — env-driven via `CORS_ORIGINS` (`config/cors.ts`). Dev defaults to localhost:3000; **production refuses to boot** without an explicit allowlist. Allowed-origin echo + disallowed-origin block both confirmed live.
-- [ ] Custom domain + TLS (handled by chosen platform).
+- [x] **Hosting decided: Render free tier** — provisioning happens by applying the committed `render.yaml` Blueprint (see `melo_deployment.md` §2). Remaining manual account bits: Cloudflare R2 bucket + keys; **free Postgres expires ~30 days → migrate to Neon free** (documented).
+- [x] **CORS allowlist** — env-driven via `CORS_ORIGINS` (`config/cors.ts`). Dev defaults to localhost:3000; **production refuses to boot** without an explicit allowlist. Allowed-origin echo + disallowed-origin block both confirmed live. The Blueprint pre-wires it to `https://melo-web.onrender.com`.
+- [x] **PWA** — manifest, icons, service worker, offline page, install UI shipped and verified (§10).
+- [ ] Custom domain + TLS (optional; `*.onrender.com` ships with TLS — revisit after the name is settled; rebuild the TWA/APK if the host changes).
 - [ ] Privacy review (PRD §Nigerian/international obligations) signed off by a professional before public launch.
 - [ ] Pricing validated via user research (PRD §launch strategy).
 
@@ -84,3 +86,16 @@
 - [x] Rows match on ANY variant, but score against the user's ORIGINAL words — a synonym widens the net without outranking a direct hit (dedup by best score).
 - [x] Track search matches artist name, genre, and region; album search matches artist name — so "burna" returns artist + songs + albums (the PRD's own worked example, confirmed live).
 - [ ] Synonym/alias list is a curated seed — extend from real search analytics before leaning on it (PRD keeps the taxonomy editable).
+
+## 10. PWA & Android APK — PWA VERIFIED / APK PREPARED
+
+- [x] Web manifest (`src/app/manifest.ts`) — standalone display, 192/512/maskable icons; served at `/manifest.webmanifest` (verified live).
+- [x] App icons generated from one SVG source (`scripts/generate-icons.mjs`, sharp) — brand-consistent set incl. iOS apple-icon + favicon.
+- [x] Service worker (`public/sw.js`) — caches hashed build assets only; pages network-first with offline fallback; API/auth/playback traffic is never cached. Registered in production only.
+- [x] `sw.js` served with `Cache-Control: no-cache` so updates reach installed clients.
+- [x] Install UI (`PwaRegistrar.tsx`) — install chip on Chromium, Share→Add-to-Home-Screen hint on iOS; dismissible; hidden when standalone.
+- [x] Offline fallback page (`public/offline.html`).
+- [x] Digital Asset Links served at `/.well-known/assetlinks.json` (keystore fingerprint embedded).
+- [x] APK toolchain prepared: JDK 17 + Bubblewrap CLI, signing keystore (`android/melo-twa.keystore`), `twa-manifest.json` (package `app.melo.web`), full runbook (`android/README.md`).
+- [ ] **APK build** — runs after the Render deploy is live: `cd android && bubblewrap update && bubblewrap build` (a TWA wraps the production HTTPS URL; docs/melo_pwa_apk.md).
+- [ ] Decide: sideload the APK directly vs. Google Play (AAB + $25 Play Console + store review).

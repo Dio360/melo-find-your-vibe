@@ -84,9 +84,15 @@ export function TrackList({ tracks, likedIds, onLike, hideArtist }: TrackListPro
             />
 
             <div className="min-w-0">
-              <p className={`text-sm font-semibold truncate ${isCurrent ? 'text-[#1DB95D]' : 'text-white'}`}>
+              <Link
+                href={`/tracks/${t.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className={`text-sm font-semibold truncate block hover:underline ${
+                  isCurrent ? 'text-[#1DB95D]' : 'text-white'
+                }`}
+              >
                 {t.title}
-              </p>
+              </Link>
               {!hideArtist && t.artistId ? (
                 <Link
                   href={`/artists/${t.artistId}`}

@@ -211,7 +211,7 @@ export default function LibraryPage() {
                 <History className="w-4 h-4 text-[#00E5FF] shrink-0" />
                 <span className="flex items-center gap-1.5">
                   <Mic2 className="w-3.5 h-3.5" />
-                  Follows, saves and history live under Library in the API — artist pages land with the catalogue UI.
+                  Follows live on each artist page. Listening history is recorded by the API and surfaces in recommendations.
                 </span>
               </section>
             </>

@@ -96,7 +96,7 @@ export const api = {
       id: string;
       name: string;
       description: string | null;
-      tracks: { track: { id: string; title: string; duration?: number; artist: { id: string; name: string } } }[];
+      tracks: { track: { id: string; title: string; duration?: number; artist: { id: string; name: string }; album?: { id: string; title: string; cover: string | null } | null } }[];
     }>(`/playlists/${id}`),
   artistDetail: (id: string) =>
     request<{
@@ -108,7 +108,7 @@ export const api = {
       region: string | null;
       verified: boolean;
       albums: { id: string; title: string; cover: string | null; releaseDate: string | null }[];
-      tracks: { id: string; title: string; duration: number; genre: string | null; albumId: string | null }[];
+      tracks: { id: string; title: string; duration: number; genre: string | null; albumId: string | null; album: { id: string; title: string; cover: string | null } | null }[];
     }>(`/catalogue/artists/${id}`),
   albumDetail: (id: string) =>
     request<{
@@ -150,7 +150,13 @@ export const api = {
         description: string | null;
         tracks: {
           position: number;
-          track: { id: string; title: string; duration: number; artist: { name: string } };
+          track: {
+            id: string;
+            title: string;
+            duration: number;
+            artist: { id: string; name: string };
+            album?: { id: string; title: string; cover: string | null } | null;
+          };
         }[];
       };
       explanation: string;

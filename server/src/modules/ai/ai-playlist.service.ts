@@ -115,7 +115,10 @@ export class AiPlaylistService {
   private async popularLicensed(take: number) {
     const popular = await this.prisma.track.findMany({
       where: { status: 'active' },
-      include: { artist: true },
+      include: {
+        artist: true,
+        album: { select: { id: true, title: true, cover: true } },
+      },
       orderBy: { likes: { _count: 'desc' } },
       take: take * 3,
     });
@@ -172,7 +175,14 @@ export class AiPlaylistService {
       include: {
         tracks: {
           orderBy: { position: 'asc' },
-          include: { track: { include: { artist: { select: { name: true } } } } },
+          include: {
+            track: {
+              include: {
+                artist: { select: { id: true, name: true } },
+                album: { select: { id: true, title: true, cover: true } },
+              },
+            },
+          },
         },
       },
     });
@@ -188,7 +198,10 @@ export class AiPlaylistService {
             id: pt.track.id,
             title: pt.track.title,
             duration: pt.track.duration,
-            artist: { name: pt.track.artist.name },
+            artist: { id: pt.track.artist.id, name: pt.track.artist.name },
+            album: pt.track.album
+              ? { id: pt.track.album.id, title: pt.track.album.title, cover: pt.track.album.cover }
+              : null,
           },
         })),
       },

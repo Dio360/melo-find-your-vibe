@@ -10,7 +10,7 @@ import type { TrackData } from '@/components/TrackCard';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
-import { bestCover, coverFor, fmtDuration, glowFor } from '@/lib/vibes';
+import { bestCover, coverFor, coverFrom, fmtDuration, glowFor } from '@/lib/vibes';
 
 interface AlbumDetail {
   id: string;
@@ -57,7 +57,7 @@ function AlbumContent() {
     title: t.title,
     artist: album?.artist.name ?? '',
     album: album?.title ?? '',
-    coverUrl: bestCover(album?.title ?? '', album?.artist.name ?? '?', glowFor(i)),
+    coverUrl: coverFrom(album, album?.title ?? '', album?.artist.name ?? '?', glowFor(i)),
     vibe: t.genre ?? '',
     region: '',
     duration: fmtDuration(t.duration),

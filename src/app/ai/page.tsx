@@ -12,7 +12,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
-import { bestCover, fmtDuration, glowFor } from '@/lib/vibes';
+import { bestCover, coverFrom, fmtDuration, glowFor } from '@/lib/vibes';
 
 export default function AIPage() {
   const user = useAuth((s) => s.user);
@@ -52,8 +52,8 @@ export default function AIPage() {
         id: pt.track.id,
         title: pt.track.title,
         artist: pt.track.artist.name,
-        album: '',
-        coverUrl: bestCover(pt.track.title, pt.track.artist.name, glowFor(i)),
+        album: pt.track.album?.title ?? '',
+        coverUrl: coverFrom(pt.track.album, pt.track.title, pt.track.artist.name, glowFor(i)),
         vibe: '',
         region: '',
         duration: fmtDuration(pt.track.duration),

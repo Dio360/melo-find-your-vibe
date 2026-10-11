@@ -7,6 +7,8 @@ export interface SearchHit {
   title: string;
   subtitle: string | null;
   score: number;
+  /** Real cover art (album cover / artist photo) when the catalogue has one. */
+  image?: string | null;
 }
 
 const LIMIT = 8;
@@ -39,8 +41,11 @@ export class SearchService {
     return this.prisma.$queryRaw<SearchHit[]>`
       SELECT t.id, t.title AS title, a.name AS subtitle,
         GREATEST(similarity(t.title, ${q}), word_similarity(t.title, ${q})) AS score,
-        'track' AS type
-      FROM "Track" t JOIN "Artist" a ON a.id = t."artistId"
+        'track' AS type,
+        al.cover AS image
+      FROM "Track" t
+      JOIN "Artist" a ON a.id = t."artistId"
+      LEFT JOIN "Album" al ON al.id = t."albumId"
       WHERE t.status = 'active'
         AND (t.title ILIKE '%' || ${q} || '%'
           OR similarity(t.title, ${q}) > 0.15
@@ -52,7 +57,8 @@ export class SearchService {
     return this.prisma.$queryRaw<SearchHit[]>`
       SELECT a.id, a.name AS title, a.country AS subtitle,
         GREATEST(similarity(a.name, ${q}), word_similarity(a.name, ${q})) AS score,
-        'artist' AS type
+        'artist' AS type,
+        a.image AS image
       FROM "Artist" a
       WHERE a.status = 'active'
         AND (a.name ILIKE '%' || ${q} || '%'
@@ -65,7 +71,8 @@ export class SearchService {
     return this.prisma.$queryRaw<SearchHit[]>`
       SELECT al.id, al.title AS title, ar.name AS subtitle,
         GREATEST(similarity(al.title, ${q}), word_similarity(al.title, ${q})) AS score,
-        'album' AS type
+        'album' AS type,
+        al.cover AS image
       FROM "Album" al JOIN "Artist" ar ON ar.id = al."artistId"
       WHERE al.status = 'active'
         AND (al.title ILIKE '%' || ${q} || '%'

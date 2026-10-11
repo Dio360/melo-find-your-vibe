@@ -14,7 +14,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
-import { VIBE_FILTERS, bestCover, coverFor, fmtDuration, glowFor } from '@/lib/vibes';
+import { VIBE_FILTERS, bestCover, coverFor, coverFrom, fmtDuration, glowFor } from '@/lib/vibes';
 
 // Vibe taxonomy — mirrors GET /api/v1/vibes
 const fallbackVibes: VibeItem[] = [
@@ -31,18 +31,18 @@ interface CatalogueTrack {
   genre?: string | null;
   region?: string | null;
   artist?: { id: string; name: string } | null;
-  album?: { id: string; title: string } | null;
+  album?: { id: string; title: string; cover?: string | null } | null;
 }
 
 interface Artist {
   id: string;
   name: string;
   country: string | null;
+  image?: string | null;
 }
 
-function ArtistArt({ name, tracks, index }: { name: string; tracks: TrackData[]; index: number }) {
-  const own = tracks.find((t) => t.artist === name);
-  const src = own ? own.coverUrl : bestCover('', name, glowFor(index));
+function ArtistArt({ name, image, index }: { name: string; image?: string | null; index: number }) {
+  const src = image || bestCover('', name, glowFor(index));
   return (
     <img
       src={src}
@@ -92,7 +92,7 @@ export default function HomePage() {
           title: t.title,
           artist: t.artist?.name ?? 'Unknown artist',
           album: t.album?.title ?? '',
-          coverUrl: bestCover(t.title, t.artist?.name ?? '?', glowFor(i)),
+          coverUrl: coverFrom(t.album, t.title, t.artist?.name ?? '?', glowFor(i)),
           vibe: t.genre ?? '',
           region: t.region ?? '',
           duration: fmtDuration(t.duration),
@@ -166,8 +166,8 @@ export default function HomePage() {
         id: pt.track.id,
         title: pt.track.title,
         artist: pt.track.artist.name,
-        album: '',
-        coverUrl: bestCover(pt.track.title, pt.track.artist.name, glowFor(i)),
+        album: pt.track.album?.title ?? '',
+        coverUrl: coverFrom(pt.track.album, pt.track.title, pt.track.artist.name, glowFor(i)),
         vibe: '',
         region: '',
         duration: fmtDuration(pt.track.duration),
@@ -277,7 +277,7 @@ export default function HomePage() {
                       title={`Open ${a.name}`}
                       className="flex flex-col items-center gap-2"
                     >
-                      <ArtistArt name={a.name} tracks={tracks} index={i} />
+                      <ArtistArt name={a.name} image={a.image} index={i} />
                       <span className="text-xs font-bold text-white group-hover:text-[#1DB95D] transition-colors">
                         {a.name}
                       </span>

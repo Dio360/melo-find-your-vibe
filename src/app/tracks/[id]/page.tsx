@@ -9,7 +9,7 @@ import type { TrackData } from '@/components/TrackCard';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
-import { bestCover, coverFor, fmtDuration, glowFor } from '@/lib/vibes';
+import { bestCover, coverFor, coverFrom, fmtDuration, glowFor } from '@/lib/vibes';
 
 interface TrackDetail {
   id: string;
@@ -61,7 +61,7 @@ function TrackContent() {
     title: t.title,
     artist: t.artist.name,
     album: t.album?.title ?? '',
-    coverUrl: bestCover(t.title, t.artist.name, glowFor(0)),
+    coverUrl: coverFrom(t.album, t.title, t.artist.name, glowFor(0)),
     vibe: t.genre ?? '',
     region: t.region ?? '',
     duration: fmtDuration(t.duration),
@@ -103,7 +103,7 @@ function TrackContent() {
       {/* Hero */}
       <div className="flex flex-col md:flex-row items-center md:items-end gap-6 pt-4">
         <img
-          src={bestCover(track.title, track.artist.name, glowFor(0))}
+          src={coverFrom(track.album, track.title, track.artist.name, glowFor(0))}
           alt={track.album?.title || track.title}
           onError={(e) => {
             const img = e.currentTarget;

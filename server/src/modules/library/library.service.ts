@@ -2,7 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 const trackWithArtist = {
-  include: { artist: { select: { id: true, name: true } } },
+  include: {
+    artist: { select: { id: true, name: true } },
+    album: { select: { id: true, title: true, cover: true } },
+  },
 };
 
 @Injectable()

@@ -5,6 +5,7 @@ export interface Scored {
   id: string;
   title: string;
   artist: { id: string; name: string };
+  album: { id: string; title: string; cover: string | null } | null;
   genre: string | null;
   verified: boolean;
   likes: number;
@@ -49,7 +50,11 @@ export class RecommendationsService {
 
     const candidates = await this.prisma.track.findMany({
       where: { status: 'active' },
-      include: { artist: true, _count: { select: { likes: true } } },
+      include: {
+        artist: true,
+        album: { select: { id: true, title: true, cover: true } },
+        _count: { select: { likes: true } },
+      },
       take: 500,
     });
 
@@ -63,6 +68,9 @@ export class RecommendationsService {
         id: t.id,
         title: t.title,
         artist: { id: t.artist.id, name: t.artist.name },
+        album: t.album
+          ? { id: t.album.id, title: t.album.title, cover: t.album.cover }
+          : null,
         genre: t.genre,
         verified: t.artist.verified,
         likes: t._count.likes,

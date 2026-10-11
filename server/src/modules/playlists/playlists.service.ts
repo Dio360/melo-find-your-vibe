@@ -13,7 +13,12 @@ export class CreatePlaylistDto {
 
 const trackView = {
   include: {
-    track: { include: { artist: { select: { id: true, name: true } } } },
+    track: {
+      include: {
+        artist: { select: { id: true, name: true } },
+        album: { select: { id: true, title: true, cover: true } },
+      },
+    },
   },
   orderBy: { position: 'asc' as const },
 };

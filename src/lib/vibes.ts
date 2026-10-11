@@ -46,6 +46,20 @@ export function bestCover(title: string, artist: string, color: string): string 
   return coverPhotoFor(title) ?? coverFor('', artist, color);
 }
 
+/**
+ * Preferred cover for a track: the album's real cover when the API returned
+ * one, else the existing title-keyed photo map, else the offline gradient.
+ * Keeps every surface on real art once the catalogue carries `album.cover`.
+ */
+export function coverFrom(
+  album: { cover?: string | null } | null | undefined,
+  title: string,
+  artist: string,
+  color: string,
+): string {
+  return album?.cover || bestCover(title, artist, color);
+}
+
 // Offline-safe cover art: gradient tile with the artist initial (no external images).
 export function coverFor(id: string, artist: string, color: string): string {
   void id;

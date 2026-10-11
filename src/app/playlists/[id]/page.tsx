@@ -10,13 +10,13 @@ import type { TrackData } from '@/components/TrackCard';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
-import { bestCover, fmtDuration, glowFor } from '@/lib/vibes';
+import { bestCover, coverFrom, fmtDuration, glowFor } from '@/lib/vibes';
 
 interface PlaylistDetail {
   id: string;
   name: string;
   description: string | null;
-  tracks: { track: { id: string; title: string; duration?: number; artist: { id: string; name: string } } }[];
+  tracks: { track: { id: string; title: string; duration?: number; artist: { id: string; name: string }; album?: { id: string; title: string; cover: string | null } | null } }[];
 }
 
 export default function PlaylistPage() {
@@ -67,7 +67,7 @@ function PlaylistContent() {
     title: pt.track.title,
     artist: pt.track.artist.name,
     album: '',
-    coverUrl: bestCover(pt.track.title, pt.track.artist.name, glowFor(i)),
+    coverUrl: coverFrom(pt.track.album, pt.track.title, pt.track.artist.name, glowFor(i)),
     vibe: '',
     region: '',
     duration: fmtDuration(pt.track.duration ?? 0),

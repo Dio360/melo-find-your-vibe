@@ -56,7 +56,13 @@ export class CatalogueService {
   artistDetail(id: string) {
     return this.prisma.artist.findUniqueOrThrow({
       where: { id },
-      include: { albums: true, tracks: { take: 50 } },
+      include: {
+        albums: true,
+        tracks: {
+          take: 50,
+          include: { album: { select: { id: true, title: true, cover: true } } },
+        },
+      },
     }).catch(() => {
       throw new NotFoundException('Artist not found');
     });
@@ -116,7 +122,7 @@ export class CatalogueService {
       },
       include: {
         artist: { select: { id: true, name: true } },
-        album: { select: { id: true, title: true } },
+        album: { select: { id: true, title: true, cover: true } },
       },
       orderBy: { title: 'asc' },
     });

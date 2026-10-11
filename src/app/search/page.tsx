@@ -12,7 +12,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
-import { bestCover, glowFor } from '@/lib/vibes';
+import { bestCover, coverFor, glowFor } from '@/lib/vibes';
 
 interface Hit {
   type: string;
@@ -20,6 +20,7 @@ interface Hit {
   title: string;
   subtitle: string | null;
   score: number;
+  image?: string | null;
 }
 
 const TABS = ['all', 'track', 'artist', 'album', 'playlist', 'vibe'];
@@ -65,7 +66,7 @@ export default function SearchPage() {
     title: h.title,
     artist: h.subtitle ?? 'Unknown artist',
     album: '',
-    coverUrl: bestCover(h.title, h.subtitle ?? '?', glowFor(i)),
+    coverUrl: h.image || bestCover(h.title, h.subtitle ?? '?', glowFor(i)),
     vibe: '',
     region: '',
     duration: '',
@@ -143,20 +144,38 @@ export default function SearchPage() {
                   key={`${h.type}-${h.id}`}
                   className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10"
                 >
-                  <div className="min-w-0">
-                    {h.type === 'artist' || h.type === 'album' || h.type === 'playlist' ? (
-                      <Link
-                        href={`/${h.type}s/${h.id}`}
-                        className="text-sm font-bold text-white truncate hover:text-[#1DB95D] hover:underline block"
-                      >
-                        {h.title}
-                      </Link>
-                    ) : (
-                      <p className="text-sm font-bold text-white truncate">{h.title}</p>
-                    )}
-                    <p className="text-xs text-zinc-400 truncate">
-                      {h.type} {h.subtitle ? `· ${h.subtitle}` : ''}
-                    </p>
+                  <div className="flex items-center gap-3 min-w-0">
+                    {h.image ? (
+                      <img
+                        src={h.image}
+                        alt={h.title}
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          if (!img.src.startsWith('data:')) {
+                            img.src = coverFor(h.id, h.subtitle ?? h.title, glowFor(h.title.length));
+                          }
+                        }}
+                        className={`shrink-0 w-12 h-12 object-cover border border-white/10 ${
+                          h.type === 'artist' ? 'rounded-full' : 'rounded'
+                        }`}
+                        loading="lazy"
+                      />
+                    ) : null}
+                    <div className="min-w-0">
+                      {h.type === 'artist' || h.type === 'album' || h.type === 'playlist' ? (
+                        <Link
+                          href={`/${h.type}s/${h.id}`}
+                          className="text-sm font-bold text-white truncate hover:text-[#1DB95D] hover:underline block"
+                        >
+                          {h.title}
+                        </Link>
+                      ) : (
+                        <p className="text-sm font-bold text-white truncate">{h.title}</p>
+                      )}
+                      <p className="text-xs text-zinc-400 truncate">
+                        {h.type} {h.subtitle ? `· ${h.subtitle}` : ''}
+                      </p>
+                    </div>
                   </div>
                   {h.type === 'artist' || h.type === 'album' || h.type === 'playlist' ? (
                     <Link

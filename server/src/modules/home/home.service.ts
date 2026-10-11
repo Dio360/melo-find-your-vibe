@@ -19,13 +19,17 @@ export class HomeService {
       this.prisma.vibe.findMany({ where: { active: true }, take: 7 }),
       this.prisma.track.findMany({
         where: { status: 'active', region: 'Nigeria' },
-        include: { artist: { select: { id: true, name: true } } },
+        include: {
+          artist: { select: { id: true, name: true } },
+          album: { select: { id: true, title: true, cover: true } },
+        },
         take: 6,
       }),
       this.prisma.track.findMany({
         where: { status: 'active' },
         include: {
           artist: { select: { id: true, name: true } },
+          album: { select: { id: true, title: true, cover: true } },
           _count: { select: { likes: true } },
         },
         orderBy: { likes: { _count: 'desc' } },
@@ -33,7 +37,14 @@ export class HomeService {
       }),
       this.prisma.listeningEvent.findMany({
         where: { userId, eventType: { in: ['complete', 'play'] } },
-        include: { track: { include: { artist: true } } },
+        include: {
+          track: {
+            include: {
+              artist: { select: { id: true, name: true } },
+              album: { select: { id: true, title: true, cover: true } },
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         take: 5,
       }),

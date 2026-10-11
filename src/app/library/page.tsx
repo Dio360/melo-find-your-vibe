@@ -12,7 +12,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
-import { bestCover, fmtDuration, glowFor } from '@/lib/vibes';
+import { bestCover, coverFrom, fmtDuration, glowFor } from '@/lib/vibes';
 
 interface Playlist {
   id: string;
@@ -40,13 +40,13 @@ export default function LibraryPage() {
   const refresh = useCallback(async () => {
     const [likes, mine] = await Promise.all([api.likedTracks(), api.myPlaylists()]);
     setLiked(
-      (likes as { track: { id: string; title: string; artist: { name: string } } }[]).map(
+      (likes as { track: { id: string; title: string; artist: { name: string }; album?: { title: string; cover: string | null } | null } }[]).map(
         (l, i) => ({
           id: l.track.id,
           title: l.track.title,
           artist: l.track.artist.name,
-          album: '',
-          coverUrl: bestCover(l.track.title, l.track.artist.name, glowFor(i)),
+          album: l.track.album?.title ?? '',
+          coverUrl: coverFrom(l.track.album, l.track.title, l.track.artist.name, glowFor(i)),
           vibe: '',
           region: '',
           duration: '',
@@ -89,8 +89,8 @@ export default function LibraryPage() {
       id: pt.track.id,
       title: pt.track.title,
       artist: pt.track.artist.name,
-      album: '',
-      coverUrl: bestCover(pt.track.title, pt.track.artist.name, glowFor(i)),
+      album: pt.track.album?.title ?? '',
+      coverUrl: coverFrom(pt.track.album, pt.track.title, pt.track.artist.name, glowFor(i)),
       vibe: '',
       region: '',
       duration: '',

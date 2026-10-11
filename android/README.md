@@ -103,8 +103,12 @@ ability to update the installed app.
 
 A TWA points at a host. After a custom domain goes live:
 
-1. Edit `twa-manifest.json`: `host`, `startUrl`, `webManifestUrl`, `fullScopeUrl`,
-   `iconUrl`, `maskableIconUrl` → new origin.
+1. Edit `twa-manifest.json`: `host`, `webManifestUrl`, `fullScopeUrl`,
+   `iconUrl`, `maskableIconUrl` → new origin. **`startUrl` stays `"/"`** — the
+   generated `app/build.gradle` computes the launch URL as
+   `"https://" + hostName + startUrl`, so an absolute `startUrl` produces a
+   garbage URL like `https://hosthttps://host/` (the app then fails with
+   ERR_NAME_NOT_RESOLVED).
 2. `bubblewrap update && bubblewrap build`.
 3. Add the new origin to the API's `CORS_ORIGINS`.
 

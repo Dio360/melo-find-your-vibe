@@ -12,7 +12,7 @@
   "navigationDividerColorDark": "#121212",
   "backgroundColor": "#121212",
   "enableNotifications": false,
-  "startUrl": "https://melo-web-dbze.onrender.com/",
+  "startUrl": "/",
   "iconUrl": "https://melo-web-dbze.onrender.com/icons/icon-512x512.png",
   "maskableIconUrl": "https://melo-web-dbze.onrender.com/icons/icon-maskable-512x512.png",
   "splashScreenFadeOutDuration": 0,
@@ -23,7 +23,7 @@
     "keyPassword": "MeloTwa2026Build"
   },
   "appVersionName": "1.0.0",
-  "appVersionCode": 4,
+  "appVersionCode": 5,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://melo-web-dbze.onrender.com/manifest.webmanifest",

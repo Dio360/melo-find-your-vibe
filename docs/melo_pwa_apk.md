@@ -79,6 +79,14 @@ invokes `java.exe` unquoted (so `jdkPath` must be space-free — a junction
 `minSdkVersion` 24 (androidbrowserhelper 2.7.4) plus an explicit
 `splashScreenFadeOutDuration` in `twa-manifest.json`.
 
+> ⚠️ **`startUrl` in `twa-manifest.json` must be `"/"` (relative).** The
+> generated `app/build.gradle` computes the launch URL as
+> `"https://" + hostName + startUrl`; an absolute `startUrl` yields
+> `https://melo-web-dbze.onrender.comhttps://melo-web-dbze.onrender.com/`,
+> which the phone renders as `ERR_NAME_NOT_RESOLVED` against the bogus host
+> `melo-web-dbze.onrender.comhttps`. Found via a bug report from the first
+> installed build (versionCode 4); fixed in versionCode 5.
+
 ### Alternative without any local toolchain
 
 [PWABuilder](https://www.pwabuilder.com) — paste `https://melo-web-dbze.onrender.com`,

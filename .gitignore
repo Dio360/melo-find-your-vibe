@@ -9,6 +9,7 @@ out/
 build/
 dist/
 *.tsbuildinfo
+coverage/
 
 # Environment variables & secrets
 .env

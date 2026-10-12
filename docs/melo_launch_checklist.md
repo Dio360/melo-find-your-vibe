@@ -22,7 +22,7 @@
 - [x] **OTP delivery is wired** (`otp-delivery.service.ts`): phone → Termii SMS, email → Resend. Delivery runs *before* the code is stored, so a provider failure stores nothing and consumes no cooldown (covered by tests).
 - [x] Production fails loudly: a missing `TERMII_API_KEY` / `RESEND_API_KEY`+`EMAIL_FROM` makes `/auth/otp/request` return 503 for that channel instead of silently accepting undeliverable logins. Dev keeps the devCode fallback (confirmed live).
 
-**Before launch:** create Termii + Resend accounts and set `TERMII_API_KEY`, `TERMII_SENDER_ID`, `RESEND_API_KEY`, `EMAIL_FROM` in the hosting platform's secret store.
+- [x] **Resend + Termii credentials live (2026-10-12).** `RESEND_API_KEY` + `EMAIL_FROM="MELO <onboarding@resend.dev>"` (Resend's test sender — swap to a verified domain later) + `TERMII_API_KEY` set on `melo-api`. Email OTP verified end-to-end against the live API: `POST /auth/otp/request` for a real address returns `{ok:true, expiresIn:300}` and the code lands in the inbox. Termii key validated against the send route (auth accepted; a non-dialable probe recipient returns a validation error, no SMS sent) — a real SMS has not been sent yet (pay-per-unit; no phone number on hand). **Bug found + fixed on first live send:** the service never attached the Resend bearer header (spec's mocked fetch hid it) — fixed in `3f75140` with a regression test asserting the header and that the key never leaks into the body.
 
 ## 3. Rights-before-scale (PRD §4.9) — VERIFIED
 
@@ -72,11 +72,11 @@ it to the live workspace (name collisions). Live services + IDs:
 
 ## 8. Open items requiring a decision/account (cannot be completed from code alone)
 
-- [ ] Real SMS/email OTP provider **accounts + keys** (Termii / Resend) — the integration is wired; only the credentials are missing. (Termii is pay-per-unit: launch email-OTP-first on Resend's free 3,000/month.)
+- [x] Real SMS/email OTP provider **accounts + keys** (Termii / Resend) — set and verified live 2026-10-12 (see §2). Email OTP is fully working end-to-end; SMS is wired and the key is accepted, pending a real phone number to test against (launch email-OTP-first: Resend free 3,000/month; Termii is pay-per-unit).
 - [ ] Sentry project + `SENTRY_DSN`.
 - [ ] LogRocket project + `NEXT_PUBLIC_LOGROCKET_APP_ID`.
 - [ ] Metrics backend for infra/playback/business metrics (§5 open list).
-- [x] **Hosting: Render free tier — PROVISIONED AND LIVE** (2026-10-11, via Render API; see `melo_deployment.md` §2 for service IDs/URLs). Catalogue seeded (7 vibes / 6 artists / 6 albums / 6 tracks). Remaining manual account bits: Cloudflare R2 bucket + keys. **Postgres migrated to Neon free (2026-10-12)** — full `pg_dump`/`pg_restore` copy, `DATABASE_URL` flipped, search verified live; no expiry clock anymore.
+- [x] **Hosting: Render free tier — PROVISIONED AND LIVE** (2026-10-11, via Render API; see `melo_deployment.md` §2 for service IDs/URLs). Catalogue seeded (7 vibes / 6 artists / 6 albums / 6 tracks). **Audio storage wired (2026-10-12):** `S3_*` (Cloudflare R2) credentials set; `GET /playback/authorize` now returns a proper SigV4-preserved R2 URL (e.g. `demo/last-last.mp3`, 900 s TTL) instead of `no-stream`. **Blocked on one dashboard click:** R2 is not yet enabled on the Cloudflare account (API error 10042), so the bucket can't be created and objects can't be uploaded yet — enable R2, then upload placeholder audio at `demo/<track-slug>.mp3`. **Postgres migrated to Neon free (2026-10-12)** — full `pg_dump`/`pg_restore` copy, `DATABASE_URL` flipped, search verified live; no expiry clock anymore.
 - [x] **CORS allowlist** — env-driven via `CORS_ORIGINS` (`config/cors.ts`). Dev defaults to localhost:3000; **production refuses to boot** without an explicit allowlist. Allowed-origin echo + disallowed-origin block both confirmed live. Live value: `https://melo-web-dbze.onrender.com` (Render's suffixed service URL), confirmed echoing on the live API.
 - [x] **PWA** — manifest, icons, service worker, offline page, install UI shipped and verified (§10).
 - [ ] Custom domain + TLS (optional; `*.onrender.com` ships with TLS — revisit after the name is settled; rebuild the TWA/APK if the host changes).

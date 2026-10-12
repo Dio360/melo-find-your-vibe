@@ -168,8 +168,9 @@ Set these in the platform's **secret store**, never in the repo. `server/.env.ex
 
 These need a human decision or account, so they stay open in the checklist:
 
-- Termii / Resend / Sentry / LogRocket account creation and keys (paste into the services' env vars in the Render dashboard when the accounts exist).
-- Cloudflare account + R2 bucket and API credentials.
+- ~~Termii / Resend account creation and keys~~ — **done 2026-10-12** (keys in the Render env store; email OTP verified live).
+- ~~Cloudflare account + R2 credentials~~ — account token + S3 key pair wired into env; **R2 itself still needs enabling in the Cloudflare dashboard** (API error 10042 until then), after which the `melo-audio` bucket is auto-created at boot and placeholder audio can be uploaded.
+- Sentry / LogRocket account creation and keys (paste into the services' env vars in the Render dashboard when the accounts exist).
 - Optional custom domain purchase + DNS.
 - Privacy review (Nigerian + international obligations) and pricing validation.
 

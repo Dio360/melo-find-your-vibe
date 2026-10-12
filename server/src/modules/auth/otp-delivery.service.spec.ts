@@ -132,6 +132,11 @@ describe('OtpDeliveryService', () => {
         'https://api.resend.com/emails',
         expect.objectContaining({ method: 'POST' }),
       );
+      // Resend authenticates via bearer header, not the body — assert it so a
+      // dropped Authorization header fails here instead of in production (502).
+      expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
+        Authorization: 'Bearer re_123',
+      });
       const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
       expect(body).toMatchObject({
         from: 'MELO <otp@melo.app>',
@@ -139,6 +144,8 @@ describe('OtpDeliveryService', () => {
         subject: 'Your MELO login code',
       });
       expect(body.text).toContain('654321');
+      // The API key must not leak into the request body.
+      expect(JSON.stringify(body)).not.toContain('re_123');
     });
 
     it('throws 502 when Resend returns a non-2xx', async () => {

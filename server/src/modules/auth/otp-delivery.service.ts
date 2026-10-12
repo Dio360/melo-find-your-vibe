@@ -84,12 +84,16 @@ export class OtpDeliveryService {
       );
     }
 
-    const response = await this.postJson('https://api.resend.com/emails', {
-      from,
-      to: [to],
-      subject: 'Your MELO login code',
-      text: this.message(code, ttlSeconds),
-    });
+    const response = await this.postJson(
+      'https://api.resend.com/emails',
+      {
+        from,
+        to: [to],
+        subject: 'Your MELO login code',
+        text: this.message(code, ttlSeconds),
+      },
+      { Authorization: `Bearer ${apiKey}` },
+    );
 
     if (!response.ok) {
       this.logger.error(`Resend send failed: HTTP ${response.status}`);
@@ -97,11 +101,15 @@ export class OtpDeliveryService {
     }
   }
 
-  private async postJson(url: string, body: unknown): Promise<Response> {
+  private async postJson(
+    url: string,
+    body: unknown,
+    extraHeaders: Record<string, string> = {},
+  ): Promise<Response> {
     try {
       return await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...extraHeaders },
         body: JSON.stringify(body),
       });
     } catch (err) {

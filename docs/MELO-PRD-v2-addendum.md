@@ -65,7 +65,9 @@ realtime starts).
 
 - Worker `melo-find-your-vibe` via `@opennextjs/cloudflare` (Pages
   `next-on-pages` path abandoned: capped at Next 15 + broken on Windows).
-  Preview: https://melo-find-your-vibe.melo-find-your-vibe.workers.dev
+  Preview: https://melo.melo-find-your-vibe.workers.dev (worker renamed
+  from the double-barrelled URL; old worker deleted). `CORS_ORIGINS`
+  carries the Render web + this preview origin.
 - `NEXT_PUBLIC_API_URL` baked at build time → live Render API; `CORS_ORIGINS`
   on `melo-api` includes the preview origin (verified echo).
 - Smoke: homepage 200 + title, manifest valid, OTP request from preview

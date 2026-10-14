@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MailService } from './mail.service.js';
 
-const ENV_KEYS = ['MAILOFLY_API_KEY', 'MAILOFLY_FROM', 'RESEND_API_KEY', 'EMAIL_FROM'];
+const ENV_KEYS = ['MAILOFLY_API_KEY', 'MAILOFLY_FROM', 'MAILOFLY_ACCOUNT_KEY', 'RESEND_API_KEY', 'EMAIL_FROM'];
 
 function jsonResponse(status: number, body: unknown): Response {
   return { ok: status >= 200 && status < 300, status, json: async () => body } as unknown as Response;
@@ -39,6 +39,18 @@ describe('MailService', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toBe('https://api.mailofly.com/emails');
     expect(fetchMock.mock.calls[0][1].headers).toMatchObject({ Authorization: 'Bearer mf_123' });
+  });
+
+  it('pins the Gmail identity via account_key when configured', async () => {
+    process.env.MAILOFLY_API_KEY = 'mf_123';
+    process.env.MAILOFLY_FROM = 'MELO <m@x.io>';
+    process.env.MAILOFLY_ACCOUNT_KEY = 'acc_123';
+    fetchMock.mockResolvedValue(jsonResponse(200, { id: 'msg_3' }));
+
+    await new MailService().sendEmail('a@b.com', 'Hi', 'hello');
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body).toMatchObject({ account_key: 'acc_123' });
   });
 
   it('falls back to Resend when Mailofly rejects', async () => {

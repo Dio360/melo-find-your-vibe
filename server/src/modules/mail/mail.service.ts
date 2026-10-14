@@ -17,6 +17,11 @@ export class MailService {
       throw new Error('Email sender is not configured (set MAILOFLY_FROM or EMAIL_FROM)');
     }
     const html = `<p>${escapeHtml(text)}</p>`;
+    // account_key pins the send to the connected Gmail identity when set
+    // (required when the workspace holds multiple identities).
+    const accountKey = (process.env.MAILOFLY_ACCOUNT_KEY ?? '').trim();
+    const payload: Record<string, unknown> = { from, to: [to], subject, text, html };
+    if (accountKey) payload['account_key'] = accountKey;
     // Mailofly primary, Resend fallback: if the primary rejects (e.g. sender
     // identity not connected yet), the email still goes out. Both providers
     // share the same request shape, so this is a safe downgrade, not a retry
@@ -27,7 +32,7 @@ export class MailService {
         await this.post(
           'https://api.mailofly.com/emails',
           mailoflyKey,
-          { from, to: [to], subject, text, html },
+          payload,
           'Mailofly',
         );
         return;

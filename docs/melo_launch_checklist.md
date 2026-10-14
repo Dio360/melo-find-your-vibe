@@ -76,7 +76,11 @@ it to the live workspace (name collisions). Live services + IDs:
 - [ ] Sentry project + `SENTRY_DSN`.
 - [ ] LogRocket project + `NEXT_PUBLIC_LOGROCKET_APP_ID`.
 - [ ] Metrics backend for infra/playback/business metrics (§5 open list).
-- [x] **Hosting: Render free tier — PROVISIONED AND LIVE** (2026-10-11, via Render API; see `melo_deployment.md` §2 for service IDs/URLs). Catalogue seeded (7 vibes / 6 artists / 6 albums / 6 tracks). **Audio storage wired (2026-10-12):** `S3_*` (Cloudflare R2) credentials set; `GET /playback/authorize` now returns a proper SigV4-preserved R2 URL (e.g. `demo/last-last.mp3`, 900 s TTL) instead of `no-stream`. **Blocked on one dashboard click:** R2 is not yet enabled on the Cloudflare account (API error 10042), so the bucket can't be created and objects can't be uploaded yet — enable R2, then upload placeholder audio at `demo/<track-slug>.mp3`. **Postgres migrated to Neon free (2026-10-12)** — full `pg_dump`/`pg_restore` copy, `DATABASE_URL` flipped, search verified live; no expiry clock anymore.
+- [x] **Hosting: Render free tier — PROVISIONED AND LIVE** (2026-10-11, via Render API; see `melo_deployment.md` §2 for service IDs/URLs). Catalogue seeded (7 vibes / 6 artists / 6 albums / 6 tracks). **Audio storage live (2026-10-14):** R2 enabled, bucket `melomusic` holds all
+18 demo assets (6 tracks × 3 bitrates, 11.0 MB); `S3_*` credentials set;
+`/playback/authorize` returns signed URLs verified to stream real bytes
+(HTTP 206 `audio/mpeg`). Demo tones are clearly placeholders until
+licensed files arrive via `/upload` + admin approval. **Postgres migrated to Neon free (2026-10-12)** — full `pg_dump`/`pg_restore` copy, `DATABASE_URL` flipped, search verified live; no expiry clock anymore.
 - [x] **CORS allowlist** — env-driven via `CORS_ORIGINS` (`config/cors.ts`). Dev defaults to localhost:3000; **production refuses to boot** without an explicit allowlist. Allowed-origin echo + disallowed-origin block both confirmed live. Live value: `https://melo-web-dbze.onrender.com` (Render's suffixed service URL), confirmed echoing on the live API.
 - [x] **PWA** — manifest, icons, service worker, offline page, install UI shipped and verified (§10).
 - [ ] Custom domain + TLS (optional; `*.onrender.com` ships with TLS — revisit after the name is settled; rebuild the TWA/APK if the host changes).

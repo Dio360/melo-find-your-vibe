@@ -169,7 +169,14 @@ Set these in the platform's **secret store**, never in the repo. `server/.env.ex
 These need a human decision or account, so they stay open in the checklist:
 
 - ~~Termii / Resend account creation and keys~~ — **done 2026-10-12** (keys in the Render env store; email OTP verified live).
-- ~~Cloudflare account + R2 credentials~~ — account token + S3 key pair wired into env; **R2 itself still needs enabling in the Cloudflare dashboard** (API error 10042 until then), after which the `melo-audio` bucket is auto-created at boot and placeholder audio can be uploaded.
+- ~~Cloudflare account + R2 credentials~~ — **done 2026-10-14**: R2 enabled,
+  bucket `melomusic` live with all 18 demo assets (6 tracks × 64/128/320k,
+  11.0 MB matching the `AudioAsset` rows); `S3_*` wired on `melo-api`;
+  `GET /playback/authorize` returns signed R2 URLs verified to stream
+  (HTTP 206, audio/mpeg). `MAILOFLY_API_KEY/FROM/ACCOUNT_KEY` set (Work
+  Gmail identity `acc_68a8`); live OTP confirmed delivered via Mailofly
+  (visible in their `/emails` log). `ADMIN_EMAILS=mcigez@gmail.com`;
+  `/admin/pending` returns 200/[] for admin, 403 otherwise.
 - Sentry / LogRocket account creation and keys (paste into the services' env vars in the Render dashboard when the accounts exist).
 - Optional custom domain purchase + DNS.
 - Privacy review (Nigerian + international obligations) and pricing validation.

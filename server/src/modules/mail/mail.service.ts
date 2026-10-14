@@ -17,15 +17,23 @@ export class MailService {
       throw new Error('Email sender is not configured (set MAILOFLY_FROM or EMAIL_FROM)');
     }
     const html = `<p>${escapeHtml(text)}</p>`;
+    // Mailofly primary, Resend fallback: if the primary rejects (e.g. sender
+    // identity not connected yet), the email still goes out. Both providers
+    // share the same request shape, so this is a safe downgrade, not a retry
+    // storm — exactly one send is attempted per provider.
     const mailoflyKey = (process.env.MAILOFLY_API_KEY ?? '').trim();
     if (mailoflyKey) {
-      await this.post(
-        'https://api.mailofly.com/emails',
-        mailoflyKey,
-        { from, to: [to], subject, text, html },
-        'Mailofly',
-      );
-      return;
+      try {
+        await this.post(
+          'https://api.mailofly.com/emails',
+          mailoflyKey,
+          { from, to: [to], subject, text, html },
+          'Mailofly',
+        );
+        return;
+      } catch (err) {
+        this.logger.warn(`Mailofly failed, falling back to Resend: ${(err as Error).message}`);
+      }
     }
     const resendKey = (process.env.RESEND_API_KEY ?? '').trim();
     if (resendKey) {

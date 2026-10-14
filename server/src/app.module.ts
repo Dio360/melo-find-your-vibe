@@ -17,6 +17,10 @@ import { LibraryModule } from './modules/library/library.module.js';
 import { PlaylistsModule } from './modules/playlists/playlists.module.js';
 import { RecommendationsModule } from './modules/recommendations/recommendations.module.js';
 import { AiModule } from './modules/ai/ai.module.js';
+import { MailModule } from './modules/mail/mail.module.js';
+import { UploadsModule } from './modules/uploads/uploads.module.js';
+import { AdminModule } from './modules/admin/admin.module.js';
+import { AiGenerateModule } from './modules/ai-generate/ai-generate.module.js';
 import { MonitoringModule } from './monitoring/monitoring.module.js';
 
 @Module({
@@ -38,6 +42,10 @@ import { MonitoringModule } from './monitoring/monitoring.module.js';
     PlaylistsModule,
     RecommendationsModule,
     AiModule,
+    MailModule,
+    UploadsModule,
+    AdminModule,
+    AiGenerateModule,
   ],
   controllers: [AppController],
   providers: [AppService],

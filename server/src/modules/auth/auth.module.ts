@@ -5,9 +5,11 @@ import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { OtpDeliveryService } from './otp-delivery.service.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
+import { MailModule } from '../mail/mail.module.js';
 
 @Module({
   imports: [
+    MailModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET ?? 'dev-only-change-me',

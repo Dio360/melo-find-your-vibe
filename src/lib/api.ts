@@ -166,4 +166,31 @@ export const api = {
     request('/library/likes/' + trackId, { method: 'POST' }).catch(() => null),
   unlikeTrack: (trackId: string) =>
     request('/library/likes/' + trackId, { method: 'DELETE' }).catch(() => null),
+  // Stack v2 — uploads (user songs/albums; pending until admin approval).
+  presignUpload: (contentType: string, coverContentType?: string) =>
+    request<{
+      uploadId: string;
+      audioKey: string;
+      audioUploadUrl: string;
+      coverKey: string | null;
+      coverUploadUrl: string | null;
+      expiresIn: number;
+    }>('/uploads/presign', {
+      method: 'POST',
+      body: JSON.stringify({ contentType, coverContentType }),
+    }),
+  completeUpload: (dto: Record<string, unknown>) =>
+    request<{ trackId: string; status: string; source: string; moods: string[] }>(
+      '/uploads/complete',
+      { method: 'POST', body: JSON.stringify(dto) },
+    ),
+  // Stack v2 — admin review queue.
+  adminPending: () => request<unknown[]>('/admin/pending'),
+  adminApprove: (trackId: string) =>
+    request(`/admin/tracks/${trackId}/approve`, { method: 'POST' }),
+  adminReject: (trackId: string) =>
+    request(`/admin/tracks/${trackId}/reject`, { method: 'POST' }),
+  // Stack v2 — AI worship generation (501 until provider keys are set).
+  aiGenerate: (prompt: string, mood: string, duration = 60) =>
+    request('/ai/generate', { method: 'POST', body: JSON.stringify({ prompt, mood, duration }) }),
 };

@@ -74,4 +74,15 @@ export class StorageService implements OnModuleInit {
       { expiresIn },
     );
   }
+
+  /** Presigned PUT for user/AI uploads. Objects land under `uploads/` and are
+   * never playable until an admin approves the track (rights gate requires
+   * active track + active right + ready/demo asset). */
+  presignedPutUrl(key: string, contentType = 'audio/mpeg', expiresIn = 900) {
+    return getSignedUrl(
+      this.client,
+      new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
+      { expiresIn },
+    );
+  }
 }

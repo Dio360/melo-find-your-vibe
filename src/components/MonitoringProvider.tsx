@@ -2,16 +2,21 @@
 
 import { useEffect } from 'react';
 import LogRocket from 'logrocket';
+import { initPostHog } from '@/lib/posthog';
 
 /**
- * Env-gated session replay (Phase 8, PRD §89).
+ * Env-gated session replay (Phase 8, PRD §89) + PostHog analytics (stack v2).
  *
- * Inert unless NEXT_PUBLIC_LOGROCKET_APP_ID is set — a no-op in local dev
- * and CI so instrumentation can ship before the LogRocket account exists.
+ * Inert unless the respective env keys are set — no-ops in local dev
+ * and CI so instrumentation can ship before the accounts exist.
  * Mounted once, high in the tree, to capture the whole client session.
  */
 export function MonitoringProvider({ children }: { children: React.ReactNode }) {
   const appId = process.env.NEXT_PUBLIC_LOGROCKET_APP_ID;
+
+  useEffect(() => {
+    initPostHog();
+  }, []);
 
   useEffect(() => {
     if (!appId) return;

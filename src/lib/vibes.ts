@@ -8,6 +8,12 @@ export const VIBE_FILTERS: Record<string, { genre?: string; region?: string }> =
   'Amapiano Grooves': { genre: 'Amapiano' },
   'Sunday Morning': {},
   'Highlife Classics': { genre: 'Highlife' },
+  // Stack v2 — Christian-first moods (AI-generated worship placeholders +
+  // user uploads; filtered client-side until catalogue moods land).
+  Worship: {},
+  Praise: {},
+  Prayer: {},
+  'Bible Study': {},
 };
 
 export function fmtDuration(total: number): string {

@@ -1,4 +1,5 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger, Optional } from '@nestjs/common';
+import { MailService } from '../mail/mail.service.js';
 
 type Identity = { kind: 'phone' | 'email'; value: string };
 
@@ -7,7 +8,8 @@ type Identity = { kind: 'phone' | 'email'; value: string };
  *
  * Channel is chosen per identity kind:
  *   phone → Termii SMS   (TERMII_API_KEY, optional TERMII_SENDER_ID / TERMII_BASE_URL)
- *   email → Resend email (RESEND_API_KEY + EMAIL_FROM)
+ *   email → Mailofly first (MAILOFLY_API_KEY + MAILOFLY_FROM), Resend fallback
+ *           (RESEND_API_KEY + EMAIL_FROM)
  *
  * Outside production, missing credentials fall back to a dev log line so the
  * existing devCode flow keeps working. In production a missing credential
@@ -17,6 +19,8 @@ type Identity = { kind: 'phone' | 'email'; value: string };
 @Injectable()
 export class OtpDeliveryService {
   private readonly logger = new Logger(OtpDeliveryService.name);
+
+  constructor(@Optional() private readonly mail?: MailService) {}
 
   async send(identity: Identity, code: string, ttlSeconds: number): Promise<void> {
     if (identity.kind === 'phone') return this.sendSms(identity.value, code, ttlSeconds);
@@ -65,17 +69,30 @@ export class OtpDeliveryService {
   }
 
   private async sendEmail(to: string, code: string, ttlSeconds: number): Promise<void> {
-    const apiKey = (process.env.RESEND_API_KEY ?? '').trim();
-    if (!apiKey) {
+    const hasMailofly = (process.env.MAILOFLY_API_KEY ?? '').trim().length > 0;
+    const hasResend = (process.env.RESEND_API_KEY ?? '').trim().length > 0;
+    if (!hasMailofly && !hasResend) {
       if (this.isProduction()) {
         throw new HttpException(
-          'OTP delivery for email is not configured (set RESEND_API_KEY and EMAIL_FROM)',
+          'OTP delivery for email is not configured (set MAILOFLY_API_KEY or RESEND_API_KEY)',
           HttpStatus.SERVICE_UNAVAILABLE,
         );
       }
       this.logger.warn(`[dev fallback] email OTP for ${redact(to)}: ${code}`);
       return;
     }
+    // Prefer the shared MailService (Mailofly primary, Resend fallback) when
+    // wired; otherwise use the legacy direct-Resend path (kept for tests).
+    if (this.mail) {
+      try {
+        await this.mail.sendEmail(to, 'Your MELO login code', this.message(code, ttlSeconds));
+        return;
+      } catch (err) {
+        this.logger.error(`Email send failed: ${(err as Error).message}`);
+        throw new HttpException('Could not send email right now', HttpStatus.BAD_GATEWAY);
+      }
+    }
+    const apiKey = (process.env.RESEND_API_KEY ?? '').trim();
     const from = (process.env.EMAIL_FROM ?? '').trim();
     if (!from) {
       throw new HttpException(

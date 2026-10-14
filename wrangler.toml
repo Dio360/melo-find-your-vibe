@@ -1,0 +1,14 @@
+name = "melo-web"
+compatibility_date = "2026-10-01"
+
+# Cloudflare Pages target (stack v2). Render stays live until cutover.
+# Deploy: `npx @cloudflare/next-on-pages` then `wrangler pages deploy`.
+# NOTE: next-on-pages runs the app on Workers (edge runtime). API routes
+# using Node-only APIs and next/font google downloads need the static path:
+# prefer `output: 'export'` for the marketing/catalogue shell and keep
+# authenticated calls client-side against the NestJS API (Neon-backed).
+# Do NOT point Pages at production traffic until /auth + /playback smoke
+# checks pass on the preview URL.
+
+[vars]
+NEXT_PUBLIC_API_URL = "https://melo-api-72jn.onrender.com/api/v1"

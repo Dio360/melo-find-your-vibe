@@ -60,3 +60,17 @@ Admins must sign in with email OTP (JWT email claim).
 `NEXT_PUBLIC_POSTHOG_KEY` (+ optional HOST), `AI_MUSIC_PROVIDER` +
 `AI_MUSIC_API_KEY` (HF token recommended), `CONVEX_URL` (only when
 realtime starts).
+
+## 7. Cloudflare Workers preview (2026-10-15) — LIVE
+
+- Worker `melo-find-your-vibe` via `@opennextjs/cloudflare` (Pages
+  `next-on-pages` path abandoned: capped at Next 15 + broken on Windows).
+  Preview: https://melo-find-your-vibe.melo-find-your-vibe.workers.dev
+- `NEXT_PUBLIC_API_URL` baked at build time → live Render API; `CORS_ORIGINS`
+  on `melo-api` includes the preview origin (verified echo).
+- Smoke: homepage 200 + title, manifest valid, OTP request from preview
+  origin → 201 + ACAO echo. R2 incremental cache disabled (deploy-time
+  population times out from here; pages are client-rendered anyway).
+- Render web stays the canonical URL until the short-name cutover; the
+  preview is the switch target. Traffic switch = point users at the
+  Workers URL (or custom domain later).

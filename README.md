@@ -11,7 +11,7 @@ Live: https://melo-web-dbze.onrender.com/ (web) · API
 
 - Web: Next.js PWA → Cloudflare Pages target (`wrangler.toml`); Render live until cutover
 - API: NestJS modular monolith (`server/`) → Render Docker; **Neon Postgres primary** (pg_trgm search live)
-- Auth: OTP (Mailofly primary → Resend fallback → Termii SMS); Better Auth client stub in `src/lib/better-auth.ts`
+- Auth: email + password (Beatboxx-style modal; OTP retired from UI); Better Auth client in `src/lib/better-auth.ts`
 - Storage: Cloudflare R2 (presigned playback + presigned uploads under `uploads/`)
 - Analytics: PostHog (env-gated) + LogRocket; Sentry server-side
 - Realtime (later): Convex for ephemeral sync only — Neon stays source of truth

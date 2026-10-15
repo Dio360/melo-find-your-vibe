@@ -9,6 +9,7 @@ import { Header } from '@/components/Header';
 import { TrackCard, TrackData } from '@/components/TrackCard';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { AuthModal } from '@/components/AuthModal';
+import { UploadCta } from '@/components/UploadCta';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
@@ -111,6 +112,7 @@ export default function LibraryPage() {
           <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
             Your <span className="text-[#1DB95D]">Library</span>
           </h2>
+          <UploadCta />
 
           {!user && authReady ? (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center space-y-3">

@@ -2,207 +2,149 @@
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Phone, Mail, MessageSquare } from 'lucide-react';
-import { api, setToken, type ApiUser } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { X, Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
-type Method = 'phone' | 'email';
+type Tab = 'signin' | 'signup';
 
+// Beatboxx-style login/signup (Supabase Auth UI look, MELO theme):
+// email + password, dark card, green accent, inline errors, loading state.
+// OTP is retired from the UI; /auth/otp/* stays live but unoffered.
 export function AuthModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const login = useAuth((s) => s.login);
-  const [method, setMethod] = useState<Method>('phone');
-  const [step, setStep] = useState<'identity' | 'code' | 'name'>('identity');
-  const [identity, setIdentity] = useState('');
-  const [code, setCode] = useState('');
+  const router = useRouter();
+  const [tab, setTab] = useState<Tab>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [pending, setPending] = useState<{ token: string; user: ApiUser } | null>(null);
-  const [devCode, setDevCode] = useState<string | null>(null);
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   if (!open) return null;
 
   const close = () => {
-    setStep('identity');
-    setCode('');
-    setName('');
-    setPending(null);
-    setDevCode(null);
+    setPassword('');
     setError(null);
     onClose();
   };
 
-  const switchMethod = (m: Method) => {
-    setMethod(m);
-    setIdentity('');
+  const switchTab = (t: Tab) => {
+    setTab(t);
     setError(null);
   };
 
-  const requestCode = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      const res = await api.requestOtp(identity);
-      setDevCode(res.devCode ?? null);
-      setStep('code');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Request failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const verifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await api.verifyOtp(identity, code);
-      if (!res.user.name) {
-        // First sign-in — capture a display name (onboarding).
-        setPending({ token: res.accessToken, user: res.user });
-        setStep('name');
-      } else {
-        login(res.accessToken, res.user);
-        close();
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const saveName = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pending || name.trim().length < 2) return;
-    setBusy(true);
-    setError(null);
-    try {
-      // Store the session first — the profile update itself requires auth.
-      setToken(pending.token);
-      const updated = await api.updateProfile({ name: name.trim() });
-      login(pending.token, updated);
+      const res =
+        tab === 'signup'
+          ? await api.register(email.trim(), password, name.trim() || undefined)
+          : await api.login(email.trim(), password);
+      login(res.accessToken, res.user);
       close();
+      router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save name');
+      setError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
       setBusy(false);
     }
   };
 
-  // Portal out of the header: backdrop-blur/sticky ancestors turn into
-  // containing blocks for fixed children and push the modal off-screen.
+  const valid = /.+@.+\..+/.test(email.trim()) && password.length >= 8;
+
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
       <div className="w-full max-w-sm rounded-2xl bg-[#1A1A1A] border border-white/15 p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="text-lg font-extrabold text-white">Sign in to Melo</h3>
+          <h3 className="text-lg font-extrabold text-white">
+            {tab === 'signup' ? 'Create account' : 'Welcome back'}
+          </h3>
           <button onClick={close} className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-white/10">
             <X className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-xs text-zinc-400 mb-4">One-time code — no password needed.</p>
+        <p className="text-xs text-zinc-400 mb-4">
+          {tab === 'signup' ? 'Sign up to start sharing your vibe' : 'Login to your account'}
+        </p>
 
-        {step === 'identity' && (
-          <div className="grid grid-cols-2 gap-1 p-1 mb-4 rounded-xl bg-black/60 border border-white/10">
-            {(['phone', 'email'] as Method[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => switchMethod(m)}
-                className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
-                  method === m ? 'bg-[#1DB95D] text-black' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                {m === 'phone' ? <Phone className="w-3.5 h-3.5" /> : <Mail className="w-3.5 h-3.5" />}
-                {m === 'phone' ? 'Phone' : 'Email'}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {step === 'name' ? (
-          <form onSubmit={saveName} className="space-y-3">
-            <p className="text-xs text-zinc-400">
-              Welcome to Melo! What should we call you?
-            </p>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Chioma"
-              maxLength={40}
-              className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/10 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#1DB95D]"
-            />
+        <div className="grid grid-cols-2 gap-1 p-1 mb-4 rounded-xl bg-black/60 border border-white/10">
+          {(['signin', 'signup'] as Tab[]).map((t) => (
             <button
-              type="submit"
-              disabled={busy || name.trim().length < 2}
-              className="w-full py-3 rounded-xl bg-[#1DB95D] text-black font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all"
+              key={t}
+              type="button"
+              onClick={() => switchTab(t)}
+              className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                tab === t ? 'bg-[#1DB95D] text-black' : 'text-zinc-400 hover:text-white'
+              }`}
             >
-              {busy ? 'Saving…' : 'Start listening'}
+              {t === 'signin' ? 'Sign in' : 'Sign up'}
             </button>
-          </form>
-        ) : step === 'identity' ? (
-          <form onSubmit={requestCode} className="space-y-3">
+          ))}
+        </div>
+
+        <form onSubmit={submit} className="flex flex-col gap-y-3">
+          {tab === 'signup' && (
             <label className="flex items-center gap-2 px-4 py-3 rounded-xl bg-black/60 border border-white/10 focus-within:border-[#1DB95D]">
-              {method === 'phone' ? (
-                <Phone className="w-4 h-4 text-zinc-500 shrink-0" />
-              ) : (
-                <Mail className="w-4 h-4 text-zinc-500 shrink-0" />
-              )}
+              <User className="w-4 h-4 text-zinc-500 shrink-0" />
               <input
-                value={identity}
-                onChange={(e) => setIdentity(e.target.value)}
-                placeholder={method === 'phone' ? '+234 801 234 5678' : 'you@example.com'}
-                inputMode={method === 'phone' ? 'tel' : 'email'}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                maxLength={40}
+                autoComplete="name"
                 className="w-full bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
               />
             </label>
-            <button
-              type="submit"
-              disabled={busy || identity.trim().length < (method === 'phone' ? 7 : 5)}
-              className="w-full py-3 rounded-xl bg-[#1DB95D] text-black font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all"
-            >
-              {busy ? 'Sending…' : 'Send code'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={verifyCode} className="space-y-3">
-            <label className="flex items-center gap-2 px-4 py-3 rounded-xl bg-black/60 border border-white/10 focus-within:border-[#1DB95D]">
-              <MessageSquare className="w-4 h-4 text-zinc-500 shrink-0" />
-              <input
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="6-digit code"
-                inputMode="numeric"
-                maxLength={6}
-                className="w-full bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none tracking-[0.3em]"
-              />
-            </label>
-            {devCode && (
-              <p className="text-[11px] text-[#00E5FF]">
-                Demo mode — your code is <span className="font-mono font-bold">{devCode}</span>
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={busy || code.trim().length < 4}
-              className="w-full py-3 rounded-xl bg-[#1DB95D] text-black font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all"
-            >
-              {busy ? 'Verifying…' : 'Verify & sign in'}
-            </button>
+          )}
+          <label className="flex items-center gap-2 px-4 py-3 rounded-xl bg-black/60 border border-white/10 focus-within:border-[#1DB95D]">
+            <Mail className="w-4 h-4 text-zinc-500 shrink-0" />
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email address"
+              inputMode="email"
+              autoComplete="email"
+              className="w-full bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
+            />
+          </label>
+          <label className="flex items-center gap-2 px-4 py-3 rounded-xl bg-black/60 border border-white/10 focus-within:border-[#1DB95D]">
+            <Lock className="w-4 h-4 text-zinc-500 shrink-0" />
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={tab === 'signup' ? 'Password (min 8 chars)' : 'Password'}
+              type={showPw ? 'text' : 'password'}
+              autoComplete={tab === 'signup' ? 'new-password' : 'current-password'}
+              className="w-full bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none"
+            />
             <button
               type="button"
-              onClick={() => setStep('identity')}
-              className="w-full text-xs text-zinc-400 hover:text-white"
+              onClick={() => setShowPw((s) => !s)}
+              aria-label={showPw ? 'Hide password' : 'Show password'}
+              className="text-zinc-500 hover:text-white shrink-0"
             >
-              Use a different {method === 'phone' ? 'number' : 'email'}
+              {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
-          </form>
-        )}
-
-        {error && <p className="mt-3 text-xs text-[#FF5722]">{error}</p>}
+          </label>
+          {error && (
+            <p className="px-4 py-2.5 rounded-xl bg-[#FF5722]/10 border border-[#FF5722]/30 text-xs text-[#FF8A65]">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={busy || !valid}
+            className="w-full py-3 rounded-xl bg-[#1DB95D] text-black font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+          >
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+            {busy ? 'Please wait…' : tab === 'signup' ? 'Create account' : 'Sign in'}
+          </button>
+        </form>
       </div>
     </div>,
     document.body,

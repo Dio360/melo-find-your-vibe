@@ -6,6 +6,10 @@
 import { api } from './api';
 
 export const betterAuthClient = {
+  register: (email: string, password: string, name?: string) =>
+    api.register(email, password, name),
+  login: (email: string, password: string) => api.login(email, password),
+  // Legacy OTP — retired from the UI, endpoints stay live.
   requestOtp: (identifier: string) => api.requestOtp(identifier),
   verifyOtp: (identifier: string, code: string) => api.verifyOtp(identifier, code),
 };

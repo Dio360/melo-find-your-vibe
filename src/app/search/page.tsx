@@ -9,6 +9,7 @@ import { Header } from '@/components/Header';
 import { TrackCard, TrackData } from '@/components/TrackCard';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { AuthModal } from '@/components/AuthModal';
+import { UploadCta } from '@/components/UploadCta';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
@@ -95,6 +96,7 @@ export default function SearchPage() {
           <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
             Search <span className="text-[#1DB95D]">Melo</span>
           </h2>
+          <UploadCta compact />
 
           <form onSubmit={run} className="relative">
             <SearchIcon className="w-4 h-4 text-zinc-400 absolute left-4 top-1/2 -translate-y-1/2" />

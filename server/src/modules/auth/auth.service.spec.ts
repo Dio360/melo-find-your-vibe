@@ -228,4 +228,69 @@ describe('AuthService', () => {
       );
     });
   });
+
+  describe('password auth (Beatboxx-style)', () => {
+    const user = { id: 'u9', phone: null, email: 'ada@x.io', name: 'Ada', country: 'NG' };
+
+    it('registers with a bcrypt hash and signs email claims', async () => {
+      (prisma.user as unknown as Record<string, ReturnType<typeof vi.fn>>).findUnique =
+        vi.fn().mockResolvedValue(null);
+      (prisma.user as unknown as Record<string, ReturnType<typeof vi.fn>>).create =
+        vi.fn().mockResolvedValue({ ...user, passwordHash: 'hashed' });
+
+      const res = await service.register({ email: 'Ada@X.io', password: 'secret123', name: 'Ada' });
+
+      const create = (prisma.user as unknown as Record<string, ReturnType<typeof vi.fn>>).create;
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ email: 'ada@x.io' }) }),
+      );
+      const hash = create.mock.calls[0][0].data.passwordHash as string;
+      expect(hash).not.toBe('secret123');
+      expect(hash.startsWith('$2')).toBe(true);
+      expect(jwt.signAsync).toHaveBeenCalledWith({ sub: 'u9', email: 'ada@x.io' });
+      expect(res.user).not.toHaveProperty('passwordHash');
+    });
+
+    it('rejects registration with a short password', async () => {
+      await expect(service.register({ email: 'a@x.io', password: 'short' })).rejects.toMatchObject({
+        status: 400,
+      });
+    });
+
+    it('rejects duplicate registration with 409', async () => {
+      (prisma.user as unknown as Record<string, ReturnType<typeof vi.fn>>).findUnique =
+        vi.fn().mockResolvedValue({ ...user, passwordHash: 'hashed' });
+      await expect(
+        service.register({ email: 'ada@x.io', password: 'secret123' }),
+      ).rejects.toMatchObject({ status: 409 });
+    });
+
+    it('logs in with the correct password', async () => {
+      const bcrypt = await import('bcryptjs');
+      const passwordHash = await bcrypt.hash('secret123', 4);
+      (prisma.user as unknown as Record<string, ReturnType<typeof vi.fn>>).findUnique =
+        vi.fn().mockResolvedValue({ ...user, passwordHash });
+
+      const res = await service.login({ email: 'ada@x.io', password: 'secret123' });
+
+      expect(res.accessToken).toBe('signed.jwt.token');
+      expect(jwt.signAsync).toHaveBeenCalledWith({ sub: 'u9', email: 'ada@x.io' });
+    });
+
+    it('rejects login with the wrong password or unknown email', async () => {
+      const bcrypt = await import('bcryptjs');
+      const passwordHash = await bcrypt.hash('secret123', 4);
+      const findUnique = vi
+        .fn()
+        .mockResolvedValueOnce({ ...user, passwordHash })
+        .mockResolvedValueOnce(null);
+      (prisma.user as unknown as Record<string, ReturnType<typeof vi.fn>>).findUnique = findUnique;
+      await expect(service.login({ email: 'ada@x.io', password: 'nope-nope1' })).rejects.toMatchObject({
+        status: 401,
+      });
+      await expect(service.login({ email: 'ghost@x.io', password: 'secret123' })).rejects.toMatchObject({
+        status: 401,
+      });
+    });
+  });
 });

@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import {
   AuthService,
+  PasswordDto,
   RequestOtpDto,
   VerifyOtpDto,
 } from './auth.service.js';
@@ -11,6 +12,19 @@ import type { AuthenticatedRequest } from './jwt-auth.guard.js';
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
+  @Public()
+  @Post('register')
+  register(@Body() dto: PasswordDto) {
+    return this.auth.register(dto);
+  }
+
+  @Public()
+  @Post('login')
+  login(@Body() dto: PasswordDto) {
+    return this.auth.login(dto);
+  }
+
+  // OTP kept live but no longer offered in the UI (password auth is primary).
   @Public()
   @Post('otp/request')
   requestOtp(@Body() dto: RequestOtpDto) {

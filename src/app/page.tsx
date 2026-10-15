@@ -11,6 +11,7 @@ import { AiPromptBar } from '@/components/AiPromptBar';
 import { TrackCard, TrackData } from '@/components/TrackCard';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { AuthModal } from '@/components/AuthModal';
+import { UploadCta } from '@/components/UploadCta';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
@@ -261,6 +262,7 @@ export default function HomePage() {
               ))}
             </div>
           </section>
+          <UploadCta />
 
           {/* Popular Artists */}
           {artists.length > 0 && (

@@ -42,6 +42,18 @@ export interface ApiUser {
 }
 
 export const api = {
+  register: (email: string, password: string, name?: string) =>
+    request<{ accessToken: string; user: ApiUser }>(
+      '/auth/register',
+      { method: 'POST', body: JSON.stringify({ email, password, name }) },
+      false,
+    ),
+  login: (email: string, password: string) =>
+    request<{ accessToken: string; user: ApiUser }>(
+      '/auth/login',
+      { method: 'POST', body: JSON.stringify({ email, password }) },
+      false,
+    ),
   requestOtp: (identifier: string) =>
     request<{ ok: boolean; kind: string; expiresIn: number; devCode?: string }>(
       '/auth/otp/request',

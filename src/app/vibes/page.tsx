@@ -9,6 +9,7 @@ import { VibePill, VibeItem } from '@/components/VibePill';
 import { TrackCard, TrackData } from '@/components/TrackCard';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { AuthModal } from '@/components/AuthModal';
+import { UploadCta } from '@/components/UploadCta';
 import { api } from '@/lib/api';
 import { useMeloPlayer } from '@/hooks/useMeloPlayer';
 import { VIBE_FILTERS, bestCover, coverFrom, fmtDuration, glowFor } from '@/lib/vibes';
@@ -96,6 +97,9 @@ export default function VibesPage() {
             <p className="text-sm text-zinc-400 mt-2">
               Pick a vibe to filter the catalogue below.
             </p>
+            <div className="mt-3">
+              <UploadCta compact />
+            </div>
           </div>
 
           {Object.entries(groups).map(([category, items]) => (

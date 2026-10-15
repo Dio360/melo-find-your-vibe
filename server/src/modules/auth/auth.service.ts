@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { randomInt } from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { RedisService } from '../../redis/redis.service.js';
 import { OtpDeliveryService } from './otp-delivery.service.js';
@@ -27,6 +28,28 @@ export class VerifyOtpDto {
   phone?: string;
   email?: string;
   code!: string;
+}
+
+export class PasswordDto {
+  email!: string;
+  password!: string;
+  name?: string;
+}
+
+function toEmail(raw: unknown): string {
+  const email = String(raw ?? '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+    throw new BadRequestException('Invalid email address');
+  }
+  return email;
+}
+
+function toPassword(raw: unknown): string {
+  const password = String(raw ?? '');
+  if (password.length < 8 || password.length > 128) {
+    throw new BadRequestException('Password must be 8..128 characters');
+  }
+  return password;
 }
 
 type Identity = { kind: 'phone' | 'email'; value: string };
@@ -139,5 +162,38 @@ export class AuthService {
         country: user.country,
       },
     };
+  }
+
+  /** Password auth (Beatboxx-style login/signup). OTP endpoints stay live
+   * but the UI no longer offers them. */
+  async register(dto: PasswordDto) {
+    const email = toEmail(dto.email);
+    const password = toPassword(dto.password);
+    const name = String(dto.name ?? '').trim().slice(0, 40) || null;
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing?.passwordHash) {
+      throw new HttpException('An account with this email already exists', HttpStatus.CONFLICT);
+    }
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = existing
+      ? await this.prisma.user.update({ where: { email }, data: { passwordHash, ...(name ? { name } : {}) } })
+      : await this.prisma.user.create({ data: { email, passwordHash, name, country: 'NG' } });
+    const accessToken = await this.jwt.signAsync({ sub: user.id, email: user.email });
+    return { accessToken, user: this.publicUser(user) };
+  }
+
+  async login(dto: PasswordDto) {
+    const email = toEmail(dto.email);
+    const password = toPassword(dto.password);
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+    const accessToken = await this.jwt.signAsync({ sub: user.id, email: user.email });
+    return { accessToken, user: this.publicUser(user) };
+  }
+
+  private publicUser(user: { id: string; phone: string | null; email: string | null; name: string | null; country: string | null }) {
+    return { id: user.id, phone: user.phone, email: user.email, name: user.name, country: user.country };
   }
 }

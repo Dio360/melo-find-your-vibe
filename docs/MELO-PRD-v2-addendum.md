@@ -76,3 +76,15 @@ realtime starts).
 - Render web stays the canonical URL until the short-name cutover; the
   preview is the switch target. Traffic switch = point users at the
   Workers URL (or custom domain later).
+
+## 8. Password auth replaces OTP in the UI (2026-10-15)
+
+- OTP emails/SMS were unreliable in practice (spam folders, zero Termii
+  balance), so sign-up/sign-in moved to Beatboxx-style email + password
+  (`POST /auth/register`, `POST /auth/login`, bcrypt cost 10,
+  `User.passwordHash`, migration `20261015010000_password_auth`).
+- Web `AuthModal` rewritten: Sign in / Sign up tabs, show/hide password,
+  inline errors, loading state — no more codes. OTP endpoints stay live
+  but unoffered.
+- Upload entry points (`UploadCta`) added to Home, Library, Search, Vibes
+  (Beatboxx plus-button pattern) → all route into `/upload`.

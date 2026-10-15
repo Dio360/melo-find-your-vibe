@@ -18,27 +18,41 @@ export class UpdatePreferencesDto {
   explicitPreference?: string;
 }
 
+const PUBLIC_USER_SELECT = {
+  id: true,
+  phone: true,
+  email: true,
+  name: true,
+  avatar: true,
+  country: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  me(userId: string) {
-    return this.prisma.user.findUniqueOrThrow({
+  async me(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      include: { preference: true },
+      select: { ...PUBLIC_USER_SELECT, preference: true },
     });
+    return user;
   }
 
-  updateProfile(userId: string, dto: UpdateProfileDto) {
-    return this.prisma.user.update({
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
         ...(dto.avatar !== undefined ? { avatar: dto.avatar } : {}),
         ...(dto.country !== undefined ? { country: dto.country } : {}),
       },
-      include: { preference: true },
+      select: { ...PUBLIC_USER_SELECT, preference: true },
     });
+    return user;
   }
 
   updatePreferences(userId: string, dto: UpdatePreferencesDto) {

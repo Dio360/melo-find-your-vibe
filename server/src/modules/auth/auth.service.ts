@@ -1,16 +1,12 @@
-import {
-  BadRequestException,
-  HttpException,
-  HttpStatus,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, Optional, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { randomInt } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { RedisService } from '../../redis/redis.service.js';
 import { OtpDeliveryService } from './otp-delivery.service.js';
+import { MailService } from '../mail/mail.service.js';
 
 const OTP_TTL_SECONDS = Number(process.env.OTP_TTL_SECONDS ?? 300);
 const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS ?? 5);
@@ -80,6 +76,7 @@ export class AuthService {
     private readonly redis: RedisService,
     private readonly jwt: JwtService,
     private readonly delivery: OtpDeliveryService,
+    @Optional() private readonly mail?: MailService,
   ) {}
 
   async requestOtp(dto: RequestOtpDto) {
@@ -195,5 +192,79 @@ export class AuthService {
 
   private publicUser(user: { id: string; phone: string | null; email: string | null; name: string | null; country: string | null }) {
     return { id: user.id, phone: user.phone, email: user.email, name: user.name, country: user.country };
+  }
+
+  /** Password reset via email link. Forgot always returns ok (no account
+   * enumeration); the token is a hashed single-use Redis secret (15 min). */
+  async forgotPassword(emailRaw: string) {
+    const email = toEmail(emailRaw);
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (user) {
+      const token = randomBytes(32).toString('hex');
+      const digest = createHash('sha256').update(token).digest('hex');
+      await this.redis.raw.set(`pwreset:${digest}`, user.id, 'EX', 900);
+      const base = (process.env.PASSWORD_RESET_URL_BASE ?? '').trim()
+        || (process.env.CORS_ORIGINS ?? '').split(',')[0]?.trim()
+        || 'http://localhost:3000';
+      const link = `${base.replace(/\/+$/, '')}/reset-password?token=${token}`;
+      if (this.mail) {
+        await this.mail
+          .sendEmail(email, 'Reset your MELO password', `Reset your password here (expires in 15 minutes): ${link}`)
+          .catch(() => undefined);
+      }
+    }
+    return { ok: true };
+  }
+
+  async resetPassword(tokenRaw: string, passwordRaw: string) {
+    const token = String(tokenRaw ?? '').trim();
+    if (!/^[0-9a-f]{64}$/.test(token)) {
+      throw new UnauthorizedException('Invalid or expired reset link');
+    }
+    const password = toPassword(passwordRaw);
+    const digest = createHash('sha256').update(token).digest('hex');
+    const userId = await this.redis.raw.get(`pwreset:${digest}`);
+    if (!userId) {
+      throw new UnauthorizedException('Invalid or expired reset link');
+    }
+    await this.redis.raw.del(`pwreset:${digest}`);
+    const passwordHash = await bcrypt.hash(password, 10);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    return { ok: true };
+  }
+
+  /** Google sign-in (inert unless GOOGLE_CLIENT_ID is set). Verifies the
+   * GIS ID token with Google, then finds-or-creates the user by email. */
+  async googleLogin(idTokenRaw: string) {
+    const clientId = (process.env.GOOGLE_CLIENT_ID ?? '').trim();
+    if (!clientId) {
+      throw new HttpException('Google sign-in is not configured', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+    const idToken = String(idTokenRaw ?? '').trim();
+    if (!idToken) throw new UnauthorizedException('Missing Google credential');
+    let payload: { email?: string; email_verified?: boolean; name?: string; sub?: string };
+    try {
+      const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      payload = (await res.json()) as typeof payload;
+    } catch {
+      throw new UnauthorizedException('Invalid Google credential');
+    }
+    if (!payload.email || payload.email_verified === false) {
+      throw new UnauthorizedException('Google email not verified');
+    }
+    const email = toEmail(payload.email);
+    const aud = (payload as { aud?: string }).aud;
+    if (aud !== clientId) {
+      throw new UnauthorizedException('Google credential audience mismatch');
+    }
+    const name = String(payload.name ?? '').trim().slice(0, 40) || null;
+    const user = await this.prisma.user.upsert({
+      where: { email },
+      update: { ...(name ? { name } : {}) },
+      create: { email, name, country: 'NG' },
+    });
+    const accessToken = await this.jwt.signAsync({ sub: user.id, email: user.email });
+    return { accessToken, user: this.publicUser(user) };
   }
 }

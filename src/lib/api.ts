@@ -54,6 +54,24 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ email, password }) },
       false,
     ),
+  googleLogin: (idToken: string) =>
+    request<{ accessToken: string; user: ApiUser }>(
+      '/auth/google',
+      { method: 'POST', body: JSON.stringify({ idToken }) },
+      false,
+    ),
+  forgotPassword: (email: string) =>
+    request<{ ok: boolean }>(
+      '/auth/password/forgot',
+      { method: 'POST', body: JSON.stringify({ email }) },
+      false,
+    ),
+  resetPassword: (token: string, password: string) =>
+    request<{ ok: boolean }>(
+      '/auth/password/reset',
+      { method: 'POST', body: JSON.stringify({ token, password }) },
+      false,
+    ),
   requestOtp: (identifier: string) =>
     request<{ ok: boolean; kind: string; expiresIn: number; devCode?: string }>(
       '/auth/otp/request',

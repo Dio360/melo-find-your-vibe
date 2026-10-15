@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { X, Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -22,12 +22,16 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
+  const googleDiv = useRef<HTMLDivElement>(null);
+  const googleCid = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? '';
 
   if (!open) return null;
 
   const close = () => {
     setPassword('');
     setError(null);
+    setForgotSent(false);
     onClose();
   };
 
@@ -56,6 +60,65 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
   };
 
   const valid = /.+@.+\..+/.test(email.trim()) && password.length >= 8;
+
+  // Google Identity Services button (env-gated; hidden until the web client
+  // ID exists). Credential goes to /auth/google, same session afterwards.
+  useEffect(() => {
+    if (!open || !googleCid || !googleDiv.current) return;
+    const w = window as unknown as {
+      google?: { accounts: { id: { initialize(o: unknown): void; renderButton(el: HTMLElement, o: unknown): void } } };
+    };
+    const render = () => {
+      if (!w.google || !googleDiv.current) return;
+      w.google.accounts.id.initialize({
+        client_id: googleCid,
+        callback: (resp: { credential?: string }) => {
+          if (!resp.credential) {
+            setError('Google sign-in failed');
+            return;
+          }
+          setBusy(true);
+          api
+            .googleLogin(resp.credential)
+            .then((res) => {
+              login(res.accessToken, res.user);
+              close();
+              router.refresh();
+            })
+            .catch((err) => setError(err instanceof Error ? err.message : 'Google sign-in failed'))
+            .finally(() => setBusy(false));
+        },
+      });
+      w.google.accounts.id.renderButton(googleDiv.current, { theme: 'filled_black', size: 'large', width: 320 });
+    };
+    if (w.google) {
+      render();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = render;
+    document.head.appendChild(script);
+  }, [open, googleCid, login, router]);
+
+  const forgot = async () => {
+    if (!/.+@.+\..+/.test(email.trim())) {
+      setError('Enter your email above first');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await api.forgotPassword(email.trim());
+      setForgotSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Request failed');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
@@ -144,7 +207,27 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
             {busy && <Loader2 className="w-4 h-4 animate-spin" />}
             {busy ? 'Please wait…' : tab === 'signup' ? 'Create account' : 'Sign in'}
           </button>
+          {tab === 'signin' && (
+            <button
+              type="button"
+              onClick={() => void forgot()}
+              disabled={busy}
+              className="w-full text-xs text-zinc-400 hover:text-white disabled:opacity-40"
+            >
+              {forgotSent ? 'Reset link sent — check your inbox (15 min, one use).' : 'Forgot password?'}
+            </button>
+          )}
         </form>
+        {googleCid && (
+          <div className="mt-3">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="flex-1 h-px bg-white/10" />
+              <span className="text-[11px] text-zinc-500">or</span>
+              <span className="flex-1 h-px bg-white/10" />
+            </div>
+            <div ref={googleDiv} className="flex justify-center" />
+          </div>
+        )}
       </div>
     </div>,
     document.body,

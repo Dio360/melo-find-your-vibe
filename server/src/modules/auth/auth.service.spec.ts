@@ -229,6 +229,105 @@ describe('AuthService', () => {
     });
   });
 
+  describe('password reset', () => {
+    it('forgot returns ok and stores a hashed single-use token', async () => {
+      (prisma.user as unknown as Record<string, ReturnType<typeof vi.fn>>).findUnique =
+        vi.fn().mockResolvedValue({ id: 'u9', email: 'ada@x.io' });
+
+      const res = await service.forgotPassword('ada@x.io');
+
+      expect(res).toEqual({ ok: true });
+      const keys = [...redis.store.keys()].filter((k) => k.startsWith('pwreset:'));
+      expect(keys).toHaveLength(1);
+      expect(keys[0]).toMatch(/^pwreset:[0-9a-f]{64}$/);
+    });
+
+    it('forgot returns ok for unknown emails without storing anything', async () => {
+      (prisma.user as unknown as Record<string, ReturnType<typeof vi.fn>>).findUnique =
+        vi.fn().mockResolvedValue(null);
+      await expect(service.forgotPassword('ghost@x.io')).resolves.toEqual({ ok: true });
+      expect([...redis.store.keys()]).toHaveLength(0);
+    });
+
+    it('reset rotates the password and burns the token', async () => {
+      const crypto = await import('node:crypto');
+      const token = 'a'.repeat(64);
+      const digest = crypto.createHash('sha256').update(token).digest('hex');
+      redis.store.set(`pwreset:${digest}`, 'u9');
+      const update = vi.fn().mockResolvedValue({});
+      (prisma.user as unknown as Record<string, ReturnType<typeof vi.fn>>).update = update;
+
+      await service.resetPassword(token, 'brand-new-pass');
+
+      const hash = update.mock.calls[0][0].data.passwordHash as string;
+      expect(hash.startsWith('$2')).toBe(true);
+      expect(redis.store.has(`pwreset:${digest}`)).toBe(false);
+    });
+
+    it('reset rejects garbage tokens and short passwords', async () => {
+      await expect(service.resetPassword('nope', 'brand-new-pass')).rejects.toMatchObject({
+        status: 401,
+      });
+      await expect(service.resetPassword('b'.repeat(64), 'brand-new-pass')).rejects.toMatchObject({
+        status: 401,
+      });
+      const crypto = await import('node:crypto');
+      const digest = crypto.createHash('sha256').update('c'.repeat(64)).digest('hex');
+      redis.store.set(`pwreset:${digest}`, 'u9');
+      await expect(service.resetPassword('c'.repeat(64), 'short')).rejects.toMatchObject({
+        status: 400,
+      });
+    });
+  });
+
+  describe('google sign-in', () => {
+    const user = { id: 'u7', phone: null, email: 'g@x.io', name: 'G', country: 'NG' };
+
+    it('is 503 when GOOGLE_CLIENT_ID is unset', async () => {
+      delete process.env.GOOGLE_CLIENT_ID;
+      await expect(service.googleLogin('tok')).rejects.toMatchObject({ status: 503 });
+    });
+
+    it('upserts by verified email when audience matches', async () => {
+      process.env.GOOGLE_CLIENT_ID = 'google-cid';
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ email: 'G@X.io', email_verified: true, name: 'G', aud: 'google-cid' }),
+      });
+      vi.stubGlobal('fetch', fetchMock);
+      const upsert = vi.fn().mockResolvedValue(user);
+      (prisma.user as unknown as Record<string, ReturnType<typeof vi.fn>>).upsert = upsert;
+
+      const res = await service.googleLogin('id-token');
+
+      expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { email: 'g@x.io' } }));
+      expect(res.accessToken).toBe('signed.jwt.token');
+      expect(res.user).not.toHaveProperty('passwordHash');
+      vi.unstubAllGlobals();
+      delete process.env.GOOGLE_CLIENT_ID;
+    });
+
+    it('rejects audience mismatch and unverified email', async () => {
+      process.env.GOOGLE_CLIENT_ID = 'google-cid';
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ email: 'g@x.io', email_verified: true, aud: 'other-app' }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ email: 'g@x.io', email_verified: false, aud: 'google-cid' }),
+        })
+        .mockResolvedValueOnce({ ok: false, status: 401 });
+      vi.stubGlobal('fetch', fetchMock);
+      await expect(service.googleLogin('t1')).rejects.toMatchObject({ status: 401 });
+      await expect(service.googleLogin('t2')).rejects.toMatchObject({ status: 401 });
+      await expect(service.googleLogin('t3')).rejects.toMatchObject({ status: 401 });
+      vi.unstubAllGlobals();
+      delete process.env.GOOGLE_CLIENT_ID;
+    });
+  });
   describe('password auth (Beatboxx-style)', () => {
     const user = { id: 'u9', phone: null, email: 'ada@x.io', name: 'Ada', country: 'NG' };
 

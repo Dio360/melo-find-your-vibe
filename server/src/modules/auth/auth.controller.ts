@@ -24,6 +24,24 @@ export class AuthController {
     return this.auth.login(dto);
   }
 
+  @Public()
+  @Post('password/forgot')
+  forgotPassword(@Body() dto: { email?: string }) {
+    return this.auth.forgotPassword(String(dto.email ?? ''));
+  }
+
+  @Public()
+  @Post('password/reset')
+  resetPassword(@Body() dto: { token?: string; password?: string }) {
+    return this.auth.resetPassword(String(dto.token ?? ''), String(dto.password ?? ''));
+  }
+
+  @Public()
+  @Post('google')
+  googleLogin(@Body() dto: { idToken?: string }) {
+    return this.auth.googleLogin(String(dto.idToken ?? ''));
+  }
+
   // OTP kept live but no longer offered in the UI (password auth is primary).
   @Public()
   @Post('otp/request')

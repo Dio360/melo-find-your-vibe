@@ -76,6 +76,9 @@ realtime starts).
 - Render web stays the canonical URL until the short-name cutover; the
   preview is the switch target. Traffic switch = point users at the
   Workers URL (or custom domain later).
+- Ops lesson: always `opennextjs-cloudflare build` immediately before
+  `deploy` — deploy alone reuses the previous `.open-next` bundle and
+  silently ships stale routes.
 
 ## 8. Password auth replaces OTP in the UI (2026-10-15)
 
